@@ -1,0 +1,9 @@
+#include "symbols.h"
+#include <iostream>
+using namespace std;
+
+void get_symbols(astree* in_ast){
+    symbol_stack.push_back(new symbol_table());
+    //construct_symbol(in_ast);
+}
+

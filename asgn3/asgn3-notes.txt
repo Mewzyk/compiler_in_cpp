@@ -1,0 +1,11 @@
+Add an oc parser to the project
+ouput an abstract syntax tree
+make sure -y flag turns on yydebug (DONE)
+
+Main function opens pipe as before, but never calls yylex()
+--> Instead make a call to yyparse() which calls yylex()
+When yyparse() returns dump the AST
+
+yyparse()
+--> call yylex()
+--> call yyerror() to print error messages

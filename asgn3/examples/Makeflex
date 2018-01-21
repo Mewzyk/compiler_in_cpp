@@ -1,0 +1,45 @@
+# $Id$
+
+GPP     = g++ -g -O0 -std=gnu++14 -Wall -Wextra -fno-diagnostics-color
+
+SOURCES = lexer.l tokens.h main.cpp Makefile
+EXECBIN = scantokens
+OBJECTS = lexer.o main.o
+
+all : ${EXECBIN}
+
+${EXECBIN} : ${OBJECTS}
+	${GPP} ${OBJECTS} -o ${EXECBIN}
+
+%.o : %.cpp tokens.h
+	${GPP} -c $<
+
+lexer.o : lexer.l
+	flex -olexer.cpp lexer.l
+	${GPP} -c lexer.cpp -o lexer.o
+
+clean :
+	- rm lexer.cpp ${OBJECTS} test.out
+
+spotless : clean
+	- rm ${EXECBIN} Listing.ps Listing.pdf
+
+ci : ${SOURCES}
+	- checksource ${SOURCES}
+	cid + ${SOURCES}
+
+test : ${EXECBIN}
+	(echo '# This is a comment.' \
+	;echo '12.3 12.0 .3 1123.4e4 ;' \
+	;echo 'hello = world +.1234;' \
+	;echo 'this * that + foo / bar;' \
+	;echo '+ - * /' \
+        ;echo 'Errors . : ( )' \
+	) | ${EXECBIN} >test.out 2>&1
+
+lis : test
+	mkpspdf Listing.ps ${SOURCES} test.out
+
+again :
+	gmake spotless ci all lis
+

@@ -1,0 +1,4090 @@
+%!PS-Adobe-3.0
+%%BoundingBox: 38 24 574 768
+%%Title: List.output.ps
+%%For: Wesley Mackey
+%%Creator: GNU Enscript 1.6.6
+%%CreationDate: Wed Oct 11 14:33:50 2017
+%%Orientation: Portrait
+%%Pages: (atend)
+%%DocumentMedia: Letter 612 792 0 () ()
+%%DocumentNeededResources: (atend)
+%%EndComments
+%%BeginProlog
+%%BeginResource: procset Enscript-Prolog 1.6 6
+%
+% Procedures.
+%
+
+/_S {	% save current state
+  /_s save def
+} def
+/_R {	% restore from saved state
+  _s restore
+} def
+
+/S {	% showpage protecting gstate
+  gsave
+  showpage
+  grestore
+} bind def
+
+/MF {	% fontname newfontname -> -	make a new encoded font
+  /newfontname exch def
+  /fontname exch def
+
+  /fontdict fontname findfont def
+  /newfont fontdict maxlength dict def
+
+  fontdict {
+    exch
+    dup /FID eq {
+      % skip FID pair
+      pop pop
+    } {
+      % copy to the new font dictionary
+      exch newfont 3 1 roll put
+    } ifelse
+  } forall
+
+  newfont /FontName newfontname put
+
+  % insert only valid encoding vectors
+  encoding_vector length 256 eq {
+    newfont /Encoding encoding_vector put
+  } if
+
+  newfontname newfont definefont pop
+} def
+
+/MF_PS { % fontname newfontname -> -	make a new font preserving its enc
+  /newfontname exch def
+  /fontname exch def
+
+  /fontdict fontname findfont def
+  /newfont fontdict maxlength dict def
+
+  fontdict {
+    exch
+    dup /FID eq {
+      % skip FID pair
+      pop pop
+    } {
+      % copy to the new font dictionary
+      exch newfont 3 1 roll put
+    } ifelse
+  } forall
+
+  newfont /FontName newfontname put
+
+  newfontname newfont definefont pop
+} def
+
+/SF { % fontname width height -> -	set a new font
+  /height exch def
+  /width exch def
+
+  findfont
+  [width 0 0 height 0 0] makefont setfont
+} def
+
+/SUF { % fontname width height -> -	set a new user font
+  /height exch def
+  /width exch def
+
+  /F-gs-user-font MF
+  /F-gs-user-font width height SF
+} def
+
+/SUF_PS { % fontname width height -> -	set a new user font preserving its enc
+  /height exch def
+  /width exch def
+
+  /F-gs-user-font MF_PS
+  /F-gs-user-font width height SF
+} def
+
+/M {moveto} bind def
+/s {show} bind def
+
+/Box {	% x y w h -> -			define box path
+  /d_h exch def /d_w exch def /d_y exch def /d_x exch def
+  d_x d_y  moveto
+  d_w 0 rlineto
+  0 d_h rlineto
+  d_w neg 0 rlineto
+  closepath
+} def
+
+/bgs {	% x y height blskip gray str -> -	show string with bg color
+  /str exch def
+  /gray exch def
+  /blskip exch def
+  /height exch def
+  /y exch def
+  /x exch def
+
+  gsave
+    x y blskip sub str stringwidth pop height Box
+    gray setgray
+    fill
+  grestore
+  x y M str s
+} def
+
+/bgcs { % x y height blskip red green blue str -> -  show string with bg color
+  /str exch def
+  /blue exch def
+  /green exch def
+  /red exch def
+  /blskip exch def
+  /height exch def
+  /y exch def
+  /x exch def
+
+  gsave
+    x y blskip sub str stringwidth pop height Box
+    red green blue setrgbcolor
+    fill
+  grestore
+  x y M str s
+} def
+
+% Highlight bars.
+/highlight_bars {	% nlines lineheight output_y_margin gray -> -
+  gsave
+    setgray
+    /ymarg exch def
+    /lineheight exch def
+    /nlines exch def
+
+    % This 2 is just a magic number to sync highlight lines to text.
+    0 d_header_y ymarg sub 2 sub translate
+
+    /cw d_output_w cols div def
+    /nrows d_output_h ymarg 2 mul sub lineheight div cvi def
+
+    % for each column
+    0 1 cols 1 sub {
+      cw mul /xp exch def
+
+      % for each rows
+      0 1 nrows 1 sub {
+        /rn exch def
+        rn lineheight mul neg /yp exch def
+        rn nlines idiv 2 mod 0 eq {
+	  % Draw highlight bar.  4 is just a magic indentation.
+	  xp 4 add yp cw 8 sub lineheight neg Box fill
+	} if
+      } for
+    } for
+
+  grestore
+} def
+
+% Line highlight bar.
+/line_highlight {	% x y width height gray -> -
+  gsave
+    /gray exch def
+    Box gray setgray fill
+  grestore
+} def
+
+% Column separator lines.
+/column_lines {
+  gsave
+    .1 setlinewidth
+    0 d_footer_h translate
+    /cw d_output_w cols div def
+    1 1 cols 1 sub {
+      cw mul 0 moveto
+      0 d_output_h rlineto stroke
+    } for
+  grestore
+} def
+
+% Column borders.
+/column_borders {
+  gsave
+    .1 setlinewidth
+    0 d_footer_h moveto
+    0 d_output_h rlineto
+    d_output_w 0 rlineto
+    0 d_output_h neg rlineto
+    closepath stroke
+  grestore
+} def
+
+% Do the actual underlay drawing
+/draw_underlay {
+  ul_style 0 eq {
+    ul_str true charpath stroke
+  } {
+    ul_str show
+  } ifelse
+} def
+
+% Underlay
+/underlay {	% - -> -
+  gsave
+    0 d_page_h translate
+    d_page_h neg d_page_w atan rotate
+
+    ul_gray setgray
+    ul_font setfont
+    /dw d_page_h dup mul d_page_w dup mul add sqrt def
+    ul_str stringwidth pop dw exch sub 2 div ul_h_ptsize -2 div moveto
+    draw_underlay
+  grestore
+} def
+
+/user_underlay {	% - -> -
+  gsave
+    ul_x ul_y translate
+    ul_angle rotate
+    ul_gray setgray
+    ul_font setfont
+    0 0 ul_h_ptsize 2 div sub moveto
+    draw_underlay
+  grestore
+} def
+
+% Page prefeed
+/page_prefeed {		% bool -> -
+  statusdict /prefeed known {
+    statusdict exch /prefeed exch put
+  } {
+    pop
+  } ifelse
+} def
+
+% Wrapped line markers
+/wrapped_line_mark {	% x y charwith charheight type -> -
+  /type exch def
+  /h exch def
+  /w exch def
+  /y exch def
+  /x exch def
+
+  type 2 eq {
+    % Black boxes (like TeX does)
+    gsave
+      0 setlinewidth
+      x w 4 div add y M
+      0 h rlineto w 2 div 0 rlineto 0 h neg rlineto
+      closepath fill
+    grestore
+  } {
+    type 3 eq {
+      % Small arrows
+      gsave
+        .2 setlinewidth
+        x w 2 div add y h 2 div add M
+        w 4 div 0 rlineto
+        x w 4 div add y lineto stroke
+
+        x w 4 div add w 8 div add y h 4 div add M
+        x w 4 div add y lineto
+	w 4 div h 8 div rlineto stroke
+      grestore
+    } {
+      % do nothing
+    } ifelse
+  } ifelse
+} def
+
+% EPSF import.
+
+/BeginEPSF {
+  /b4_Inc_state save def    		% Save state for cleanup
+  /dict_count countdictstack def	% Count objects on dict stack
+  /op_count count 1 sub def		% Count objects on operand stack
+  userdict begin
+  /showpage { } def
+  0 setgray 0 setlinecap
+  1 setlinewidth 0 setlinejoin
+  10 setmiterlimit [ ] 0 setdash newpath
+  /languagelevel where {
+    pop languagelevel
+    1 ne {
+      false setstrokeadjust false setoverprint
+    } if
+  } if
+} bind def
+
+/EndEPSF {
+  count op_count sub { pos } repeat	% Clean up stacks
+  countdictstack dict_count sub { end } repeat
+  b4_Inc_state restore
+} bind def
+
+% Check PostScript language level.
+/languagelevel where {
+  pop /gs_languagelevel languagelevel def
+} {
+  /gs_languagelevel 1 def
+} ifelse
+%%EndResource
+%%BeginResource: procset Enscript-Encoding-88591 1.6 6
+/encoding_vector [
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/space        	/exclam       	/quotedbl     	/numbersign   	
+/dollar       	/percent      	/ampersand    	/quoteright   	
+/parenleft    	/parenright   	/asterisk     	/plus         	
+/comma        	/hyphen       	/period       	/slash        	
+/zero         	/one          	/two          	/three        	
+/four         	/five         	/six          	/seven        	
+/eight        	/nine         	/colon        	/semicolon    	
+/less         	/equal        	/greater      	/question     	
+/at           	/A            	/B            	/C            	
+/D            	/E            	/F            	/G            	
+/H            	/I            	/J            	/K            	
+/L            	/M            	/N            	/O            	
+/P            	/Q            	/R            	/S            	
+/T            	/U            	/V            	/W            	
+/X            	/Y            	/Z            	/bracketleft  	
+/backslash    	/bracketright 	/asciicircum  	/underscore   	
+/quoteleft    	/a            	/b            	/c            	
+/d            	/e            	/f            	/g            	
+/h            	/i            	/j            	/k            	
+/l            	/m            	/n            	/o            	
+/p            	/q            	/r            	/s            	
+/t            	/u            	/v            	/w            	
+/x            	/y            	/z            	/braceleft    	
+/bar          	/braceright   	/tilde        	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/space        	/exclamdown   	/cent         	/sterling     	
+/currency     	/yen          	/brokenbar    	/section      	
+/dieresis     	/copyright    	/ordfeminine  	/guillemotleft	
+/logicalnot   	/hyphen       	/registered   	/macron       	
+/degree       	/plusminus    	/twosuperior  	/threesuperior	
+/acute        	/mu           	/paragraph    	/bullet       	
+/cedilla      	/onesuperior  	/ordmasculine 	/guillemotright	
+/onequarter   	/onehalf      	/threequarters	/questiondown 	
+/Agrave       	/Aacute       	/Acircumflex  	/Atilde       	
+/Adieresis    	/Aring        	/AE           	/Ccedilla     	
+/Egrave       	/Eacute       	/Ecircumflex  	/Edieresis    	
+/Igrave       	/Iacute       	/Icircumflex  	/Idieresis    	
+/Eth          	/Ntilde       	/Ograve       	/Oacute       	
+/Ocircumflex  	/Otilde       	/Odieresis    	/multiply     	
+/Oslash       	/Ugrave       	/Uacute       	/Ucircumflex  	
+/Udieresis    	/Yacute       	/Thorn        	/germandbls   	
+/agrave       	/aacute       	/acircumflex  	/atilde       	
+/adieresis    	/aring        	/ae           	/ccedilla     	
+/egrave       	/eacute       	/ecircumflex  	/edieresis    	
+/igrave       	/iacute       	/icircumflex  	/idieresis    	
+/eth          	/ntilde       	/ograve       	/oacute       	
+/ocircumflex  	/otilde       	/odieresis    	/divide       	
+/oslash       	/ugrave       	/uacute       	/ucircumflex  	
+/udieresis    	/yacute       	/thorn        	/ydieresis    	
+] def
+%%EndResource
+%%EndProlog
+%%BeginSetup
+%%IncludeResource: font Courier-Bold
+/HFpt_w 10 def
+/HFpt_h 10 def
+/Courier-Bold /HF-gs-font MF
+/HF /HF-gs-font findfont [HFpt_w 0 0 HFpt_h 0 0] makefont def
+/Courier-Bold /F-gs-font MF
+/F-gs-font 11 11 SF
+/#copies 1 def
+% Pagedevice definitions:
+gs_languagelevel 1 gt {
+  <<
+    /PageSize [612 792] 
+  >> setpagedevice
+} if
+%%BeginResource: procset Enscript-Header-enscript-mycolor 1.6 6
+%%IncludeResource: font Times-Bold
+%%IncludeResource: font Times-Roman
+
+% Fonts.
+/Times-Bold /HeaderFont-Bold MF
+/HeaderDateF /HeaderFont-Bold findfont 12 scalefont def
+
+/Times-Roman /HeaderFont-Times MF
+/HeaderHDRF /HeaderFont-Times findfont 14 scalefont def
+
+/HeaderPageNumF /Helvetica-Bold findfont 28.8 scalefont def
+/HeaderPageCountF /Helvetica-Bold findfont 18 scalefont def
+
+/do_header {	% print enscript header
+  gsave
+    d_header_x d_header_y translate
+
+    /dhw d_header_w 4 sub def
+
+    /linecolor {0 0 0 setrgbcolor} bind def  % line color
+    /txcolor   {0 0 0 setrgbcolor} bind def  % text color
+    /fncolor   {0 0 0 setrgbcolor} bind def  % filename line color
+
+    .5 setlinewidth
+
+    % line across bottom of the header area
+    linecolor
+    0 0 moveto dhw 0 lineto
+
+    % side boxes
+    /sbw d_header_h 2 mul def	% side box width
+
+    % left side box
+    0 0 sbw d_header_h Box
+    linecolor
+    stroke
+
+    % date/time in left box
+    txcolor
+    HeaderDateF setfont
+    moddatestr dup stringwidth pop sbw exch sub 2 div
+    d_header_h 2 div 2 add moveto show
+    modtimestr dup stringwidth pop sbw exch sub 2 div
+    d_header_h 5 div moveto show
+
+    % right side box
+    dhw sbw sub 0 sbw d_header_h Box
+    linecolor
+    stroke
+
+    % get width of pagecount
+    HeaderPageCountF setfont
+    pagecountstr stringwidth pop
+
+    txcolor
+    HeaderPageNumF setfont
+    pagenumstr stringwidth pop add  % add to width of pagecount
+    sbw exch sub 2 div dhw sbw sub add
+    d_header_h .2 mul moveto
+
+    pagenumstr show
+
+    HeaderPageCountF setfont
+    pagecountstr show
+
+    % filename
+    fncolor
+    HeaderHDRF setfont
+    dhw fname stringwidth pop sub 2 div d_header_h 8 div moveto
+    fname show
+
+    % user supplied header string.
+    user_header_p {
+      /h d_header_h 8 div 5 mul def
+
+      % HACK around a bug in enscript 1.6.0:
+      % for some reason this is getting set to "(null)" and
+      %
+      user_header_center_str (\(null\)) eq {
+        /user_header_center_str () def
+      } if
+
+      % Implement strict enscript compatibility.
+      user_header_center_str () eq user_header_right_str () eq and {
+        dhw user_header_left_str stringwidth pop sub 2 div
+        h moveto user_header_left_str show
+      } {
+        sbw 5 add h moveto user_header_left_str show
+
+        dhw user_header_center_str stringwidth pop sub 2 div
+        h moveto user_header_center_str show
+
+	dhw sbw sub 5 sub user_header_right_str stringwidth pop
+	sub h moveto user_header_right_str show
+      } ifelse
+    } if
+
+  grestore
+} bind def
+%%EndResource
+/d_page_w 536 def
+/d_page_h 744 def
+/d_header_x 0 def
+/d_header_y 708 def
+/d_header_w 536 def
+/d_header_h 36 def
+/d_footer_x 0 def
+/d_footer_y 0 def
+/d_footer_w 536 def
+/d_footer_h 0 def
+/d_output_w 536 def
+/d_output_h 708 def
+/cols 1 def
+%%EndSetup
+%%Page: (1) 1
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 1 def
+/fname (yyparse.output) def
+/fdir (.) def
+/ftail (yyparse.output) def
+% User defined strings:
+/pagenumstr (1) def
+/moddatestr (10/11/17) def
+/pagecountstr (/8) def
+/modtimestr (14:33:43) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+32.4 694 M (1:) s
+52.2 694 M
+(Terminals unused in grammar) s
+32.4 682 M (2:) s
+32.4 670 M (3:) s
+52.2 670 M
+(   ROOT) s
+32.4 658 M (4:) s
+32.4 646 M (5:) s
+32.4 634 M (6:) s
+52.2 634 M
+(Grammar) s
+32.4 622 M (7:) s
+32.4 610 M (8:) s
+52.2 610 M
+(    0 $accept: program $end) s
+32.4 598 M (9:) s
+25.8 586 M (10:) s
+52.2 586 M
+(    1 program: stmtseq) s
+25.8 574 M (11:) s
+25.8 562 M (12:) s
+52.2 562 M
+(    2 stmtseq: stmtseq expr ';') s
+25.8 550 M (13:) s
+52.2 550 M
+(    3        | stmtseq error ';') s
+25.8 538 M (14:) s
+52.2 538 M
+(    4        | stmtseq ';') s
+25.8 526 M (15:) s
+52.2 526 M
+(    5        | %empty) s
+25.8 514 M (16:) s
+25.8 502 M (17:) s
+52.2 502 M
+(    6 expr: expr '=' expr) s
+25.8 490 M (18:) s
+52.2 490 M
+(    7     | expr '+' expr) s
+25.8 478 M (19:) s
+52.2 478 M
+(    8     | expr '-' expr) s
+25.8 466 M (20:) s
+52.2 466 M
+(    9     | expr '*' expr) s
+25.8 454 M (21:) s
+52.2 454 M
+(   10     | expr '/' expr) s
+25.8 442 M (22:) s
+52.2 442 M
+(   11     | expr '^' expr) s
+25.8 430 M (23:) s
+52.2 430 M
+(   12     | '+' expr) s
+25.8 418 M (24:) s
+52.2 418 M
+(   13     | '-' expr) s
+25.8 406 M (25:) s
+52.2 406 M
+(   14     | '\(' expr '\)') s
+25.8 394 M (26:) s
+52.2 394 M
+(   15     | IDENT) s
+25.8 382 M (27:) s
+52.2 382 M
+(   16     | NUMBER) s
+25.8 370 M (28:) s
+25.8 358 M (29:) s
+25.8 346 M (30:) s
+52.2 346 M
+(Terminals, with rules where they appear) s
+25.8 334 M (31:) s
+25.8 322 M (32:) s
+52.2 322 M
+($end \(0\) 0) s
+25.8 310 M (33:) s
+52.2 310 M
+('\(' \(40\) 14) s
+25.8 298 M (34:) s
+52.2 298 M
+('\)' \(41\) 14) s
+25.8 286 M (35:) s
+52.2 286 M
+('*' \(42\) 9) s
+25.8 274 M (36:) s
+52.2 274 M
+('+' \(43\) 7 12) s
+25.8 262 M (37:) s
+52.2 262 M
+('-' \(45\) 8 13) s
+25.8 250 M (38:) s
+52.2 250 M
+('/' \(47\) 10) s
+25.8 238 M (39:) s
+52.2 238 M
+(';' \(59\) 2 3 4) s
+25.8 226 M (40:) s
+52.2 226 M
+('=' \(61\) 6) s
+25.8 214 M (41:) s
+52.2 214 M
+('^' \(94\) 11) s
+25.8 202 M (42:) s
+52.2 202 M
+(error \(256\) 3) s
+25.8 190 M (43:) s
+52.2 190 M
+(ROOT \(258\)) s
+25.8 178 M (44:) s
+52.2 178 M
+(IDENT \(259\) 15) s
+25.8 166 M (45:) s
+52.2 166 M
+(NUMBER \(260\) 16) s
+25.8 154 M (46:) s
+52.2 154 M
+(POS \(261\)) s
+25.8 142 M (47:) s
+52.2 142 M
+(NEG \(262\)) s
+25.8 130 M (48:) s
+25.8 118 M (49:) s
+25.8 106 M (50:) s
+52.2 106 M
+(Nonterminals, with rules where they appear) s
+25.8 94 M (51:) s
+25.8 82 M (52:) s
+52.2 82 M
+($accept \(17\)) s
+25.8 70 M (53:) s
+52.2 70 M
+(    on left: 0) s
+25.8 58 M (54:) s
+52.2 58 M
+(program \(18\)) s
+25.8 46 M (55:) s
+52.2 46 M
+(    on left: 1, on right: 0) s
+25.8 34 M (56:) s
+52.2 34 M
+(stmtseq \(19\)) s
+25.8 22 M (57:) s
+52.2 22 M
+(    on left: 2 3 4 5, on right: 1 2 3 4) s
+25.8 10 M (58:) s
+52.2 10 M
+(expr \(20\)) s
+_R
+S
+%%Page: (2) 2
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 2 def
+/fname (yyparse.output) def
+/fdir (.) def
+/ftail (yyparse.output) def
+% User defined strings:
+/pagenumstr (2) def
+/moddatestr (10/11/17) def
+/pagecountstr (/8) def
+/modtimestr (14:33:43) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+25.8 694 M (59:) s
+52.2 694 M
+(    on left: 6 7 8 9 10 11 12 13 14 15 16, on right: 2 6 7 8 9 10 11) s
+25.8 682 M (60:) s
+52.2 682 M
+(    12 13 14) s
+25.8 670 M (61:) s
+25.8 658 M (62:) s
+25.8 646 M (63:) s
+52.2 646 M
+(State 0) s
+25.8 634 M (64:) s
+25.8 622 M (65:) s
+52.2 622 M
+(    0 $accept: . program $end) s
+25.8 610 M (66:) s
+25.8 598 M (67:) s
+52.2 598 M
+(    $default  reduce using rule 5 \(stmtseq\)) s
+25.8 586 M (68:) s
+25.8 574 M (69:) s
+52.2 574 M
+(    program  go to state 1) s
+25.8 562 M (70:) s
+52.2 562 M
+(    stmtseq  go to state 2) s
+25.8 550 M (71:) s
+25.8 538 M (72:) s
+25.8 526 M (73:) s
+52.2 526 M
+(State 1) s
+25.8 514 M (74:) s
+25.8 502 M (75:) s
+52.2 502 M
+(    0 $accept: program . $end) s
+25.8 490 M (76:) s
+25.8 478 M (77:) s
+52.2 478 M
+(    $end  shift, and go to state 3) s
+25.8 466 M (78:) s
+25.8 454 M (79:) s
+25.8 442 M (80:) s
+52.2 442 M
+(State 2) s
+25.8 430 M (81:) s
+25.8 418 M (82:) s
+52.2 418 M
+(    1 program: stmtseq .) s
+25.8 406 M (83:) s
+52.2 406 M
+(    2 stmtseq: stmtseq . expr ';') s
+25.8 394 M (84:) s
+52.2 394 M
+(    3        | stmtseq . error ';') s
+25.8 382 M (85:) s
+52.2 382 M
+(    4        | stmtseq . ';') s
+25.8 370 M (86:) s
+25.8 358 M (87:) s
+52.2 358 M
+(    error   shift, and go to state 4) s
+25.8 346 M (88:) s
+52.2 346 M
+(    IDENT   shift, and go to state 5) s
+25.8 334 M (89:) s
+52.2 334 M
+(    NUMBER  shift, and go to state 6) s
+25.8 322 M (90:) s
+52.2 322 M
+(    '+'     shift, and go to state 7) s
+25.8 310 M (91:) s
+52.2 310 M
+(    '-'     shift, and go to state 8) s
+25.8 298 M (92:) s
+52.2 298 M
+(    ';'     shift, and go to state 9) s
+25.8 286 M (93:) s
+52.2 286 M
+(    '\('     shift, and go to state 10) s
+25.8 274 M (94:) s
+25.8 262 M (95:) s
+52.2 262 M
+(    $end  reduce using rule 1 \(program\)) s
+25.8 250 M (96:) s
+25.8 238 M (97:) s
+52.2 238 M
+(    expr  go to state 11) s
+25.8 226 M (98:) s
+25.8 214 M (99:) s
+19.2 202 M (100:) s
+52.2 202 M
+(State 3) s
+19.2 190 M (101:) s
+19.2 178 M (102:) s
+52.2 178 M
+(    0 $accept: program $end .) s
+19.2 166 M (103:) s
+19.2 154 M (104:) s
+52.2 154 M
+(    $default  accept) s
+19.2 142 M (105:) s
+19.2 130 M (106:) s
+19.2 118 M (107:) s
+52.2 118 M
+(State 4) s
+19.2 106 M (108:) s
+19.2 94 M (109:) s
+52.2 94 M
+(    3 stmtseq: stmtseq error . ';') s
+19.2 82 M (110:) s
+19.2 70 M (111:) s
+52.2 70 M
+(    ';'  shift, and go to state 12) s
+19.2 58 M (112:) s
+19.2 46 M (113:) s
+19.2 34 M (114:) s
+52.2 34 M
+(State 5) s
+19.2 22 M (115:) s
+19.2 10 M (116:) s
+52.2 10 M
+(   15 expr: IDENT .) s
+_R
+S
+%%Page: (3) 3
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 3 def
+/fname (yyparse.output) def
+/fdir (.) def
+/ftail (yyparse.output) def
+% User defined strings:
+/pagenumstr (3) def
+/moddatestr (10/11/17) def
+/pagecountstr (/8) def
+/modtimestr (14:33:43) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (117:) s
+19.2 682 M (118:) s
+52.2 682 M
+(    $default  reduce using rule 15 \(expr\)) s
+19.2 670 M (119:) s
+19.2 658 M (120:) s
+19.2 646 M (121:) s
+52.2 646 M
+(State 6) s
+19.2 634 M (122:) s
+19.2 622 M (123:) s
+52.2 622 M
+(   16 expr: NUMBER .) s
+19.2 610 M (124:) s
+19.2 598 M (125:) s
+52.2 598 M
+(    $default  reduce using rule 16 \(expr\)) s
+19.2 586 M (126:) s
+19.2 574 M (127:) s
+19.2 562 M (128:) s
+52.2 562 M
+(State 7) s
+19.2 550 M (129:) s
+19.2 538 M (130:) s
+52.2 538 M
+(   12 expr: '+' . expr) s
+19.2 526 M (131:) s
+19.2 514 M (132:) s
+52.2 514 M
+(    IDENT   shift, and go to state 5) s
+19.2 502 M (133:) s
+52.2 502 M
+(    NUMBER  shift, and go to state 6) s
+19.2 490 M (134:) s
+52.2 490 M
+(    '+'     shift, and go to state 7) s
+19.2 478 M (135:) s
+52.2 478 M
+(    '-'     shift, and go to state 8) s
+19.2 466 M (136:) s
+52.2 466 M
+(    '\('     shift, and go to state 10) s
+19.2 454 M (137:) s
+19.2 442 M (138:) s
+52.2 442 M
+(    expr  go to state 13) s
+19.2 430 M (139:) s
+19.2 418 M (140:) s
+19.2 406 M (141:) s
+52.2 406 M
+(State 8) s
+19.2 394 M (142:) s
+19.2 382 M (143:) s
+52.2 382 M
+(   13 expr: '-' . expr) s
+19.2 370 M (144:) s
+19.2 358 M (145:) s
+52.2 358 M
+(    IDENT   shift, and go to state 5) s
+19.2 346 M (146:) s
+52.2 346 M
+(    NUMBER  shift, and go to state 6) s
+19.2 334 M (147:) s
+52.2 334 M
+(    '+'     shift, and go to state 7) s
+19.2 322 M (148:) s
+52.2 322 M
+(    '-'     shift, and go to state 8) s
+19.2 310 M (149:) s
+52.2 310 M
+(    '\('     shift, and go to state 10) s
+19.2 298 M (150:) s
+19.2 286 M (151:) s
+52.2 286 M
+(    expr  go to state 14) s
+19.2 274 M (152:) s
+19.2 262 M (153:) s
+19.2 250 M (154:) s
+52.2 250 M
+(State 9) s
+19.2 238 M (155:) s
+19.2 226 M (156:) s
+52.2 226 M
+(    4 stmtseq: stmtseq ';' .) s
+19.2 214 M (157:) s
+19.2 202 M (158:) s
+52.2 202 M
+(    $default  reduce using rule 4 \(stmtseq\)) s
+19.2 190 M (159:) s
+19.2 178 M (160:) s
+19.2 166 M (161:) s
+52.2 166 M
+(State 10) s
+19.2 154 M (162:) s
+19.2 142 M (163:) s
+52.2 142 M
+(   14 expr: '\(' . expr '\)') s
+19.2 130 M (164:) s
+19.2 118 M (165:) s
+52.2 118 M
+(    IDENT   shift, and go to state 5) s
+19.2 106 M (166:) s
+52.2 106 M
+(    NUMBER  shift, and go to state 6) s
+19.2 94 M (167:) s
+52.2 94 M
+(    '+'     shift, and go to state 7) s
+19.2 82 M (168:) s
+52.2 82 M
+(    '-'     shift, and go to state 8) s
+19.2 70 M (169:) s
+52.2 70 M
+(    '\('     shift, and go to state 10) s
+19.2 58 M (170:) s
+19.2 46 M (171:) s
+52.2 46 M
+(    expr  go to state 15) s
+19.2 34 M (172:) s
+19.2 22 M (173:) s
+19.2 10 M (174:) s
+52.2 10 M
+(State 11) s
+_R
+S
+%%Page: (4) 4
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 4 def
+/fname (yyparse.output) def
+/fdir (.) def
+/ftail (yyparse.output) def
+% User defined strings:
+/pagenumstr (4) def
+/moddatestr (10/11/17) def
+/pagecountstr (/8) def
+/modtimestr (14:33:43) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (175:) s
+19.2 682 M (176:) s
+52.2 682 M
+(    2 stmtseq: stmtseq expr . ';') s
+19.2 670 M (177:) s
+52.2 670 M
+(    6 expr: expr . '=' expr) s
+19.2 658 M (178:) s
+52.2 658 M
+(    7     | expr . '+' expr) s
+19.2 646 M (179:) s
+52.2 646 M
+(    8     | expr . '-' expr) s
+19.2 634 M (180:) s
+52.2 634 M
+(    9     | expr . '*' expr) s
+19.2 622 M (181:) s
+52.2 622 M
+(   10     | expr . '/' expr) s
+19.2 610 M (182:) s
+52.2 610 M
+(   11     | expr . '^' expr) s
+19.2 598 M (183:) s
+19.2 586 M (184:) s
+52.2 586 M
+(    '='  shift, and go to state 16) s
+19.2 574 M (185:) s
+52.2 574 M
+(    '+'  shift, and go to state 17) s
+19.2 562 M (186:) s
+52.2 562 M
+(    '-'  shift, and go to state 18) s
+19.2 550 M (187:) s
+52.2 550 M
+(    '*'  shift, and go to state 19) s
+19.2 538 M (188:) s
+52.2 538 M
+(    '/'  shift, and go to state 20) s
+19.2 526 M (189:) s
+52.2 526 M
+(    '^'  shift, and go to state 21) s
+19.2 514 M (190:) s
+52.2 514 M
+(    ';'  shift, and go to state 22) s
+19.2 502 M (191:) s
+19.2 490 M (192:) s
+19.2 478 M (193:) s
+52.2 478 M
+(State 12) s
+19.2 466 M (194:) s
+19.2 454 M (195:) s
+52.2 454 M
+(    3 stmtseq: stmtseq error ';' .) s
+19.2 442 M (196:) s
+19.2 430 M (197:) s
+52.2 430 M
+(    $default  reduce using rule 3 \(stmtseq\)) s
+19.2 418 M (198:) s
+19.2 406 M (199:) s
+19.2 394 M (200:) s
+52.2 394 M
+(State 13) s
+19.2 382 M (201:) s
+19.2 370 M (202:) s
+52.2 370 M
+(    6 expr: expr . '=' expr) s
+19.2 358 M (203:) s
+52.2 358 M
+(    7     | expr . '+' expr) s
+19.2 346 M (204:) s
+52.2 346 M
+(    8     | expr . '-' expr) s
+19.2 334 M (205:) s
+52.2 334 M
+(    9     | expr . '*' expr) s
+19.2 322 M (206:) s
+52.2 322 M
+(   10     | expr . '/' expr) s
+19.2 310 M (207:) s
+52.2 310 M
+(   11     | expr . '^' expr) s
+19.2 298 M (208:) s
+52.2 298 M
+(   12     | '+' expr .) s
+19.2 286 M (209:) s
+19.2 274 M (210:) s
+52.2 274 M
+(    $default  reduce using rule 12 \(expr\)) s
+19.2 262 M (211:) s
+19.2 250 M (212:) s
+19.2 238 M (213:) s
+52.2 238 M
+(State 14) s
+19.2 226 M (214:) s
+19.2 214 M (215:) s
+52.2 214 M
+(    6 expr: expr . '=' expr) s
+19.2 202 M (216:) s
+52.2 202 M
+(    7     | expr . '+' expr) s
+19.2 190 M (217:) s
+52.2 190 M
+(    8     | expr . '-' expr) s
+19.2 178 M (218:) s
+52.2 178 M
+(    9     | expr . '*' expr) s
+19.2 166 M (219:) s
+52.2 166 M
+(   10     | expr . '/' expr) s
+19.2 154 M (220:) s
+52.2 154 M
+(   11     | expr . '^' expr) s
+19.2 142 M (221:) s
+52.2 142 M
+(   13     | '-' expr .) s
+19.2 130 M (222:) s
+19.2 118 M (223:) s
+52.2 118 M
+(    $default  reduce using rule 13 \(expr\)) s
+19.2 106 M (224:) s
+19.2 94 M (225:) s
+19.2 82 M (226:) s
+52.2 82 M
+(State 15) s
+19.2 70 M (227:) s
+19.2 58 M (228:) s
+52.2 58 M
+(    6 expr: expr . '=' expr) s
+19.2 46 M (229:) s
+52.2 46 M
+(    7     | expr . '+' expr) s
+19.2 34 M (230:) s
+52.2 34 M
+(    8     | expr . '-' expr) s
+19.2 22 M (231:) s
+52.2 22 M
+(    9     | expr . '*' expr) s
+19.2 10 M (232:) s
+52.2 10 M
+(   10     | expr . '/' expr) s
+_R
+S
+%%Page: (5) 5
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 5 def
+/fname (yyparse.output) def
+/fdir (.) def
+/ftail (yyparse.output) def
+% User defined strings:
+/pagenumstr (5) def
+/moddatestr (10/11/17) def
+/pagecountstr (/8) def
+/modtimestr (14:33:43) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (233:) s
+52.2 694 M
+(   11     | expr . '^' expr) s
+19.2 682 M (234:) s
+52.2 682 M
+(   14     | '\(' expr . '\)') s
+19.2 670 M (235:) s
+19.2 658 M (236:) s
+52.2 658 M
+(    '='  shift, and go to state 16) s
+19.2 646 M (237:) s
+52.2 646 M
+(    '+'  shift, and go to state 17) s
+19.2 634 M (238:) s
+52.2 634 M
+(    '-'  shift, and go to state 18) s
+19.2 622 M (239:) s
+52.2 622 M
+(    '*'  shift, and go to state 19) s
+19.2 610 M (240:) s
+52.2 610 M
+(    '/'  shift, and go to state 20) s
+19.2 598 M (241:) s
+52.2 598 M
+(    '^'  shift, and go to state 21) s
+19.2 586 M (242:) s
+52.2 586 M
+(    '\)'  shift, and go to state 23) s
+19.2 574 M (243:) s
+19.2 562 M (244:) s
+19.2 550 M (245:) s
+52.2 550 M
+(State 16) s
+19.2 538 M (246:) s
+19.2 526 M (247:) s
+52.2 526 M
+(    6 expr: expr '=' . expr) s
+19.2 514 M (248:) s
+19.2 502 M (249:) s
+52.2 502 M
+(    IDENT   shift, and go to state 5) s
+19.2 490 M (250:) s
+52.2 490 M
+(    NUMBER  shift, and go to state 6) s
+19.2 478 M (251:) s
+52.2 478 M
+(    '+'     shift, and go to state 7) s
+19.2 466 M (252:) s
+52.2 466 M
+(    '-'     shift, and go to state 8) s
+19.2 454 M (253:) s
+52.2 454 M
+(    '\('     shift, and go to state 10) s
+19.2 442 M (254:) s
+19.2 430 M (255:) s
+52.2 430 M
+(    expr  go to state 24) s
+19.2 418 M (256:) s
+19.2 406 M (257:) s
+19.2 394 M (258:) s
+52.2 394 M
+(State 17) s
+19.2 382 M (259:) s
+19.2 370 M (260:) s
+52.2 370 M
+(    7 expr: expr '+' . expr) s
+19.2 358 M (261:) s
+19.2 346 M (262:) s
+52.2 346 M
+(    IDENT   shift, and go to state 5) s
+19.2 334 M (263:) s
+52.2 334 M
+(    NUMBER  shift, and go to state 6) s
+19.2 322 M (264:) s
+52.2 322 M
+(    '+'     shift, and go to state 7) s
+19.2 310 M (265:) s
+52.2 310 M
+(    '-'     shift, and go to state 8) s
+19.2 298 M (266:) s
+52.2 298 M
+(    '\('     shift, and go to state 10) s
+19.2 286 M (267:) s
+19.2 274 M (268:) s
+52.2 274 M
+(    expr  go to state 25) s
+19.2 262 M (269:) s
+19.2 250 M (270:) s
+19.2 238 M (271:) s
+52.2 238 M
+(State 18) s
+19.2 226 M (272:) s
+19.2 214 M (273:) s
+52.2 214 M
+(    8 expr: expr '-' . expr) s
+19.2 202 M (274:) s
+19.2 190 M (275:) s
+52.2 190 M
+(    IDENT   shift, and go to state 5) s
+19.2 178 M (276:) s
+52.2 178 M
+(    NUMBER  shift, and go to state 6) s
+19.2 166 M (277:) s
+52.2 166 M
+(    '+'     shift, and go to state 7) s
+19.2 154 M (278:) s
+52.2 154 M
+(    '-'     shift, and go to state 8) s
+19.2 142 M (279:) s
+52.2 142 M
+(    '\('     shift, and go to state 10) s
+19.2 130 M (280:) s
+19.2 118 M (281:) s
+52.2 118 M
+(    expr  go to state 26) s
+19.2 106 M (282:) s
+19.2 94 M (283:) s
+19.2 82 M (284:) s
+52.2 82 M
+(State 19) s
+19.2 70 M (285:) s
+19.2 58 M (286:) s
+52.2 58 M
+(    9 expr: expr '*' . expr) s
+19.2 46 M (287:) s
+19.2 34 M (288:) s
+52.2 34 M
+(    IDENT   shift, and go to state 5) s
+19.2 22 M (289:) s
+52.2 22 M
+(    NUMBER  shift, and go to state 6) s
+19.2 10 M (290:) s
+52.2 10 M
+(    '+'     shift, and go to state 7) s
+_R
+S
+%%Page: (6) 6
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 6 def
+/fname (yyparse.output) def
+/fdir (.) def
+/ftail (yyparse.output) def
+% User defined strings:
+/pagenumstr (6) def
+/moddatestr (10/11/17) def
+/pagecountstr (/8) def
+/modtimestr (14:33:43) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (291:) s
+52.2 694 M
+(    '-'     shift, and go to state 8) s
+19.2 682 M (292:) s
+52.2 682 M
+(    '\('     shift, and go to state 10) s
+19.2 670 M (293:) s
+19.2 658 M (294:) s
+52.2 658 M
+(    expr  go to state 27) s
+19.2 646 M (295:) s
+19.2 634 M (296:) s
+19.2 622 M (297:) s
+52.2 622 M
+(State 20) s
+19.2 610 M (298:) s
+19.2 598 M (299:) s
+52.2 598 M
+(   10 expr: expr '/' . expr) s
+19.2 586 M (300:) s
+19.2 574 M (301:) s
+52.2 574 M
+(    IDENT   shift, and go to state 5) s
+19.2 562 M (302:) s
+52.2 562 M
+(    NUMBER  shift, and go to state 6) s
+19.2 550 M (303:) s
+52.2 550 M
+(    '+'     shift, and go to state 7) s
+19.2 538 M (304:) s
+52.2 538 M
+(    '-'     shift, and go to state 8) s
+19.2 526 M (305:) s
+52.2 526 M
+(    '\('     shift, and go to state 10) s
+19.2 514 M (306:) s
+19.2 502 M (307:) s
+52.2 502 M
+(    expr  go to state 28) s
+19.2 490 M (308:) s
+19.2 478 M (309:) s
+19.2 466 M (310:) s
+52.2 466 M
+(State 21) s
+19.2 454 M (311:) s
+19.2 442 M (312:) s
+52.2 442 M
+(   11 expr: expr '^' . expr) s
+19.2 430 M (313:) s
+19.2 418 M (314:) s
+52.2 418 M
+(    IDENT   shift, and go to state 5) s
+19.2 406 M (315:) s
+52.2 406 M
+(    NUMBER  shift, and go to state 6) s
+19.2 394 M (316:) s
+52.2 394 M
+(    '+'     shift, and go to state 7) s
+19.2 382 M (317:) s
+52.2 382 M
+(    '-'     shift, and go to state 8) s
+19.2 370 M (318:) s
+52.2 370 M
+(    '\('     shift, and go to state 10) s
+19.2 358 M (319:) s
+19.2 346 M (320:) s
+52.2 346 M
+(    expr  go to state 29) s
+19.2 334 M (321:) s
+19.2 322 M (322:) s
+19.2 310 M (323:) s
+52.2 310 M
+(State 22) s
+19.2 298 M (324:) s
+19.2 286 M (325:) s
+52.2 286 M
+(    2 stmtseq: stmtseq expr ';' .) s
+19.2 274 M (326:) s
+19.2 262 M (327:) s
+52.2 262 M
+(    $default  reduce using rule 2 \(stmtseq\)) s
+19.2 250 M (328:) s
+19.2 238 M (329:) s
+19.2 226 M (330:) s
+52.2 226 M
+(State 23) s
+19.2 214 M (331:) s
+19.2 202 M (332:) s
+52.2 202 M
+(   14 expr: '\(' expr '\)' .) s
+19.2 190 M (333:) s
+19.2 178 M (334:) s
+52.2 178 M
+(    $default  reduce using rule 14 \(expr\)) s
+19.2 166 M (335:) s
+19.2 154 M (336:) s
+19.2 142 M (337:) s
+52.2 142 M
+(State 24) s
+19.2 130 M (338:) s
+19.2 118 M (339:) s
+52.2 118 M
+(    6 expr: expr . '=' expr) s
+19.2 106 M (340:) s
+52.2 106 M
+(    6     | expr '=' expr .) s
+19.2 94 M (341:) s
+52.2 94 M
+(    7     | expr . '+' expr) s
+19.2 82 M (342:) s
+52.2 82 M
+(    8     | expr . '-' expr) s
+19.2 70 M (343:) s
+52.2 70 M
+(    9     | expr . '*' expr) s
+19.2 58 M (344:) s
+52.2 58 M
+(   10     | expr . '/' expr) s
+19.2 46 M (345:) s
+52.2 46 M
+(   11     | expr . '^' expr) s
+19.2 34 M (346:) s
+19.2 22 M (347:) s
+52.2 22 M
+(    '='  shift, and go to state 16) s
+19.2 10 M (348:) s
+52.2 10 M
+(    '+'  shift, and go to state 17) s
+_R
+S
+%%Page: (7) 7
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 7 def
+/fname (yyparse.output) def
+/fdir (.) def
+/ftail (yyparse.output) def
+% User defined strings:
+/pagenumstr (7) def
+/moddatestr (10/11/17) def
+/pagecountstr (/8) def
+/modtimestr (14:33:43) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (349:) s
+52.2 694 M
+(    '-'  shift, and go to state 18) s
+19.2 682 M (350:) s
+52.2 682 M
+(    '*'  shift, and go to state 19) s
+19.2 670 M (351:) s
+52.2 670 M
+(    '/'  shift, and go to state 20) s
+19.2 658 M (352:) s
+52.2 658 M
+(    '^'  shift, and go to state 21) s
+19.2 646 M (353:) s
+19.2 634 M (354:) s
+52.2 634 M
+(    $default  reduce using rule 6 \(expr\)) s
+19.2 622 M (355:) s
+19.2 610 M (356:) s
+19.2 598 M (357:) s
+52.2 598 M
+(State 25) s
+19.2 586 M (358:) s
+19.2 574 M (359:) s
+52.2 574 M
+(    6 expr: expr . '=' expr) s
+19.2 562 M (360:) s
+52.2 562 M
+(    7     | expr . '+' expr) s
+19.2 550 M (361:) s
+52.2 550 M
+(    7     | expr '+' expr .) s
+19.2 538 M (362:) s
+52.2 538 M
+(    8     | expr . '-' expr) s
+19.2 526 M (363:) s
+52.2 526 M
+(    9     | expr . '*' expr) s
+19.2 514 M (364:) s
+52.2 514 M
+(   10     | expr . '/' expr) s
+19.2 502 M (365:) s
+52.2 502 M
+(   11     | expr . '^' expr) s
+19.2 490 M (366:) s
+19.2 478 M (367:) s
+52.2 478 M
+(    '*'  shift, and go to state 19) s
+19.2 466 M (368:) s
+52.2 466 M
+(    '/'  shift, and go to state 20) s
+19.2 454 M (369:) s
+52.2 454 M
+(    '^'  shift, and go to state 21) s
+19.2 442 M (370:) s
+19.2 430 M (371:) s
+52.2 430 M
+(    $default  reduce using rule 7 \(expr\)) s
+19.2 418 M (372:) s
+19.2 406 M (373:) s
+19.2 394 M (374:) s
+52.2 394 M
+(State 26) s
+19.2 382 M (375:) s
+19.2 370 M (376:) s
+52.2 370 M
+(    6 expr: expr . '=' expr) s
+19.2 358 M (377:) s
+52.2 358 M
+(    7     | expr . '+' expr) s
+19.2 346 M (378:) s
+52.2 346 M
+(    8     | expr . '-' expr) s
+19.2 334 M (379:) s
+52.2 334 M
+(    8     | expr '-' expr .) s
+19.2 322 M (380:) s
+52.2 322 M
+(    9     | expr . '*' expr) s
+19.2 310 M (381:) s
+52.2 310 M
+(   10     | expr . '/' expr) s
+19.2 298 M (382:) s
+52.2 298 M
+(   11     | expr . '^' expr) s
+19.2 286 M (383:) s
+19.2 274 M (384:) s
+52.2 274 M
+(    '*'  shift, and go to state 19) s
+19.2 262 M (385:) s
+52.2 262 M
+(    '/'  shift, and go to state 20) s
+19.2 250 M (386:) s
+52.2 250 M
+(    '^'  shift, and go to state 21) s
+19.2 238 M (387:) s
+19.2 226 M (388:) s
+52.2 226 M
+(    $default  reduce using rule 8 \(expr\)) s
+19.2 214 M (389:) s
+19.2 202 M (390:) s
+19.2 190 M (391:) s
+52.2 190 M
+(State 27) s
+19.2 178 M (392:) s
+19.2 166 M (393:) s
+52.2 166 M
+(    6 expr: expr . '=' expr) s
+19.2 154 M (394:) s
+52.2 154 M
+(    7     | expr . '+' expr) s
+19.2 142 M (395:) s
+52.2 142 M
+(    8     | expr . '-' expr) s
+19.2 130 M (396:) s
+52.2 130 M
+(    9     | expr . '*' expr) s
+19.2 118 M (397:) s
+52.2 118 M
+(    9     | expr '*' expr .) s
+19.2 106 M (398:) s
+52.2 106 M
+(   10     | expr . '/' expr) s
+19.2 94 M (399:) s
+52.2 94 M
+(   11     | expr . '^' expr) s
+19.2 82 M (400:) s
+19.2 70 M (401:) s
+52.2 70 M
+(    '^'  shift, and go to state 21) s
+19.2 58 M (402:) s
+19.2 46 M (403:) s
+52.2 46 M
+(    $default  reduce using rule 9 \(expr\)) s
+19.2 34 M (404:) s
+19.2 22 M (405:) s
+19.2 10 M (406:) s
+52.2 10 M
+(State 28) s
+_R
+S
+%%Page: (8) 8
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 8 def
+/fname (yyparse.output) def
+/fdir (.) def
+/ftail (yyparse.output) def
+% User defined strings:
+/pagenumstr (8) def
+/moddatestr (10/11/17) def
+/pagecountstr (/8) def
+/modtimestr (14:33:43) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (407:) s
+19.2 682 M (408:) s
+52.2 682 M
+(    6 expr: expr . '=' expr) s
+19.2 670 M (409:) s
+52.2 670 M
+(    7     | expr . '+' expr) s
+19.2 658 M (410:) s
+52.2 658 M
+(    8     | expr . '-' expr) s
+19.2 646 M (411:) s
+52.2 646 M
+(    9     | expr . '*' expr) s
+19.2 634 M (412:) s
+52.2 634 M
+(   10     | expr . '/' expr) s
+19.2 622 M (413:) s
+52.2 622 M
+(   10     | expr '/' expr .) s
+19.2 610 M (414:) s
+52.2 610 M
+(   11     | expr . '^' expr) s
+19.2 598 M (415:) s
+19.2 586 M (416:) s
+52.2 586 M
+(    '^'  shift, and go to state 21) s
+19.2 574 M (417:) s
+19.2 562 M (418:) s
+52.2 562 M
+(    $default  reduce using rule 10 \(expr\)) s
+19.2 550 M (419:) s
+19.2 538 M (420:) s
+19.2 526 M (421:) s
+52.2 526 M
+(State 29) s
+19.2 514 M (422:) s
+19.2 502 M (423:) s
+52.2 502 M
+(    6 expr: expr . '=' expr) s
+19.2 490 M (424:) s
+52.2 490 M
+(    7     | expr . '+' expr) s
+19.2 478 M (425:) s
+52.2 478 M
+(    8     | expr . '-' expr) s
+19.2 466 M (426:) s
+52.2 466 M
+(    9     | expr . '*' expr) s
+19.2 454 M (427:) s
+52.2 454 M
+(   10     | expr . '/' expr) s
+19.2 442 M (428:) s
+52.2 442 M
+(   11     | expr . '^' expr) s
+19.2 430 M (429:) s
+52.2 430 M
+(   11     | expr '^' expr .) s
+19.2 418 M (430:) s
+19.2 406 M (431:) s
+52.2 406 M
+(    '^'  shift, and go to state 21) s
+19.2 394 M (432:) s
+19.2 382 M (433:) s
+52.2 382 M
+(    $default  reduce using rule 11 \(expr\)) s
+_R
+S
+%%Page: (1) 9
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 1 def
+/fname (test1.in) def
+/fdir (.) def
+/ftail (test1.in) def
+% User defined strings:
+/pagenumstr (1) def
+/moddatestr (10/11/17) def
+/pagecountstr (/1) def
+/modtimestr (14:33:49) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+32.4 694 M (1:) s
+52.2 694 M
+(// $Id: test1.in,v 1.1 2015-07-08 13:29:32-07 - - $) s
+32.4 682 M (2:) s
+52.2 682 M
+(a=b*c+d*e;) s
+_R
+S
+%%Page: (1) 10
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 1 def
+/fname (test1.out) def
+/fdir (.) def
+/ftail (test1.out) def
+% User defined strings:
+/pagenumstr (1) def
+/moddatestr (10/11/17) def
+/pagecountstr (/1) def
+/modtimestr (14:33:49) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+32.4 694 M (1:) s
+52.2 694 M
+(; 0.  1: # 1 "test1.in"; 1.  0: ) s
+32.4 682 M (2:) s
+52.2 682 M
+(; 1.  1: # 1 "<built-in>") s
+32.4 670 M (3:) s
+52.2 670 M
+(; 2.  1: # 1 "<command-line>") s
+32.4 658 M (4:) s
+52.2 658 M
+(; 3.  1: # 1 "/usr/include/stdc-predef.h" 1 3 4) s
+32.4 646 M (5:) s
+52.2 646 M
+(; 4.  1: # 1 "<command-line>" 2) s
+32.4 634 M (6:) s
+52.2 634 M
+(; 5.  1: # 1 "test1.in") s
+32.4 622 M (7:) s
+52.2 622 M
+(; 6.  1: ) s
+32.4 610 M (8:) s
+52.2 610 M
+(; 6.  2: a=b*c+d*e;) s
+32.4 598 M (9:) s
+52.2 598 M
+(; ROOT "<<ROOT>>" \(0.0.0\)) s
+25.8 586 M (10:) s
+52.2 586 M
+(;    '=' "=" \(6.2.2\)) s
+25.8 574 M (11:) s
+52.2 574 M
+(;       IDENT "a" \(6.2.1\)) s
+25.8 562 M (12:) s
+52.2 562 M
+(;       '+' "+" \(6.2.6\)) s
+25.8 550 M (13:) s
+52.2 550 M
+(;          '*' "*" \(6.2.4\)) s
+25.8 538 M (14:) s
+52.2 538 M
+(;             IDENT "b" \(6.2.3\)) s
+25.8 526 M (15:) s
+52.2 526 M
+(;             IDENT "c" \(6.2.5\)) s
+25.8 514 M (16:) s
+52.2 514 M
+(;          '*' "*" \(6.2.8\)) s
+25.8 502 M (17:) s
+52.2 502 M
+(;             IDENT "d" \(6.2.7\)) s
+25.8 490 M (18:) s
+52.2 490 M
+(;             IDENT "e" \(6.2.9\)) s
+25.8 478 M (19:) s
+25.8 466 M (20:) s
+52.2 466 M
+(          pushvar   b                   ; test1.in 2.3) s
+25.8 454 M (21:) s
+52.2 454 M
+(          pushvar   c                   ; test1.in 2.5) s
+25.8 442 M (22:) s
+52.2 442 M
+(          mul                           ; test1.in 2.4) s
+25.8 430 M (23:) s
+52.2 430 M
+(          pushvar   d                   ; test1.in 2.7) s
+25.8 418 M (24:) s
+52.2 418 M
+(          pushvar   e                   ; test1.in 2.9) s
+25.8 406 M (25:) s
+52.2 406 M
+(          mul                           ; test1.in 2.8) s
+25.8 394 M (26:) s
+52.2 394 M
+(          add                           ; test1.in 2.6) s
+25.8 382 M (27:) s
+52.2 382 M
+(          popvar    a                   ; test1.in 2.1) s
+_R
+S
+%%Page: (1) 11
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 1 def
+/fname (test1.err) def
+/fdir (.) def
+/ftail (test1.err) def
+% User defined strings:
+/pagenumstr (1) def
+/moddatestr (10/11/17) def
+/pagecountstr (/4) def
+/modtimestr (14:33:49) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+32.4 694 M (1:) s
+52.2 694 M
+(Command: zexprsm -ly test1.in) s
+32.4 682 M (2:) s
+52.2 682 M
+(-- popen \(/usr/bin/cpp test1.in\), fileno\(yyin\) = 4) s
+32.4 670 M (3:) s
+52.2 670 M
+(Starting parse) s
+32.4 658 M (4:) s
+52.2 658 M
+(Entering state 0) s
+32.4 646 M (5:) s
+52.2 646 M
+(Reducing stack by rule 5 \(line 46\):) s
+32.4 634 M (6:) s
+52.2 634 M
+(-> $$ = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>":\)) s
+32.4 622 M (7:) s
+52.2 622 M
+(Stack now 0) s
+32.4 610 M (8:) s
+52.2 610 M
+(Entering state 2) s
+32.4 598 M (9:) s
+52.2 598 M
+(Reading a token: --\(end of buffer or a NUL\)) s
+25.8 586 M (10:) s
+52.2 586 M
+(--accepting rule at line 35 \("# 1 "test1.in""\)) s
+25.8 574 M (11:) s
+52.2 574 M
+(--included # 1 "test1.in") s
+25.8 562 M (12:) s
+52.2 562 M
+(--accepting rule at line 37 \(") s
+25.8 550 M (13:) s
+52.2 550 M
+("\)) s
+25.8 538 M (14:) s
+52.2 538 M
+(--accepting rule at line 35 \("# 1 "<built-in>""\)) s
+25.8 526 M (15:) s
+52.2 526 M
+(--included # 1 "<built-in>") s
+25.8 514 M (16:) s
+52.2 514 M
+(--accepting rule at line 37 \(") s
+25.8 502 M (17:) s
+52.2 502 M
+("\)) s
+25.8 490 M (18:) s
+52.2 490 M
+(--accepting rule at line 35 \("# 1 "<command-line>""\)) s
+25.8 478 M (19:) s
+52.2 478 M
+(--included # 1 "<command-line>") s
+25.8 466 M (20:) s
+52.2 466 M
+(--accepting rule at line 37 \(") s
+25.8 454 M (21:) s
+52.2 454 M
+("\)) s
+25.8 442 M (22:) s
+52.2 442 M
+(--accepting rule at line 35 \("# 1 "/usr/include/stdc-predef.h" 1 3 4"\)) s
+25.8 430 M (23:) s
+52.2 430 M
+(--included # 1 "/usr/include/stdc-predef.h") s
+25.8 418 M (24:) s
+52.2 418 M
+(--accepting rule at line 37 \(") s
+25.8 406 M (25:) s
+52.2 406 M
+("\)) s
+25.8 394 M (26:) s
+52.2 394 M
+(--accepting rule at line 35 \("# 1 "<command-line>" 2"\)) s
+25.8 382 M (27:) s
+52.2 382 M
+(--included # 1 "<command-line>") s
+25.8 370 M (28:) s
+52.2 370 M
+(--accepting rule at line 37 \(") s
+25.8 358 M (29:) s
+52.2 358 M
+("\)) s
+25.8 346 M (30:) s
+52.2 346 M
+(--accepting rule at line 35 \("# 1 "test1.in""\)) s
+25.8 334 M (31:) s
+52.2 334 M
+(--included # 1 "test1.in") s
+25.8 322 M (32:) s
+52.2 322 M
+(--accepting rule at line 37 \(") s
+25.8 310 M (33:) s
+52.2 310 M
+("\)) s
+25.8 298 M (34:) s
+52.2 298 M
+(--accepting rule at line 37 \(") s
+25.8 286 M (35:) s
+52.2 286 M
+("\)) s
+25.8 274 M (36:) s
+52.2 274 M
+(--accepting rule at line 40 \("a"\)) s
+25.8 262 M (37:) s
+52.2 262 M
+(Next token is token IDENT \(0x5a1c9d0->{IDENT 6.2.1 "a":\)) s
+25.8 250 M (38:) s
+52.2 250 M
+(Shifting token IDENT \(0x5a1c9d0->{IDENT 6.2.1 "a":\)) s
+25.8 238 M (39:) s
+52.2 238 M
+(Entering state 5) s
+25.8 226 M (40:) s
+52.2 226 M
+(Reducing stack by rule 15 \(line 58\):) s
+25.8 214 M (41:) s
+52.2 214 M
+(   $1 = token IDENT \(0x5a1c9d0->{IDENT 6.2.1 "a":\)) s
+25.8 202 M (42:) s
+52.2 202 M
+(-> $$ = nterm expr \(0x5a1c9d0->{IDENT 6.2.1 "a":\)) s
+25.8 190 M (43:) s
+52.2 190 M
+(Stack now 0 2) s
+25.8 178 M (44:) s
+52.2 178 M
+(Entering state 11) s
+25.8 166 M (45:) s
+52.2 166 M
+(Reading a token: --accepting rule at line 41 \("="\)) s
+25.8 154 M (46:) s
+52.2 154 M
+(Next token is token '=' \(0x5a1cb80->{'=' 6.2.2 "=":\)) s
+25.8 142 M (47:) s
+52.2 142 M
+(Shifting token '=' \(0x5a1cb80->{'=' 6.2.2 "=":\)) s
+25.8 130 M (48:) s
+52.2 130 M
+(Entering state 16) s
+25.8 118 M (49:) s
+52.2 118 M
+(Reading a token: --accepting rule at line 40 \("b"\)) s
+25.8 106 M (50:) s
+52.2 106 M
+(Next token is token IDENT \(0x5a1ccc0->{IDENT 6.2.3 "b":\)) s
+25.8 94 M (51:) s
+52.2 94 M
+(Shifting token IDENT \(0x5a1ccc0->{IDENT 6.2.3 "b":\)) s
+25.8 82 M (52:) s
+52.2 82 M
+(Entering state 5) s
+25.8 70 M (53:) s
+52.2 70 M
+(Reducing stack by rule 15 \(line 58\):) s
+25.8 58 M (54:) s
+52.2 58 M
+(   $1 = token IDENT \(0x5a1ccc0->{IDENT 6.2.3 "b":\)) s
+25.8 46 M (55:) s
+52.2 46 M
+(-> $$ = nterm expr \(0x5a1ccc0->{IDENT 6.2.3 "b":\)) s
+25.8 34 M (56:) s
+52.2 34 M
+(Stack now 0 2 11 16) s
+25.8 22 M (57:) s
+52.2 22 M
+(Entering state 24) s
+25.8 10 M (58:) s
+52.2 10 M
+(Reading a token: --accepting rule at line 44 \("*"\)) s
+_R
+S
+%%Page: (2) 12
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 2 def
+/fname (test1.err) def
+/fdir (.) def
+/ftail (test1.err) def
+% User defined strings:
+/pagenumstr (2) def
+/moddatestr (10/11/17) def
+/pagecountstr (/4) def
+/modtimestr (14:33:49) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+25.8 694 M (59:) s
+52.2 694 M
+(Next token is token '*' \(0x5a1ce00->{'*' 6.2.4 "*":\)) s
+25.8 682 M (60:) s
+52.2 682 M
+(Shifting token '*' \(0x5a1ce00->{'*' 6.2.4 "*":\)) s
+25.8 670 M (61:) s
+52.2 670 M
+(Entering state 19) s
+25.8 658 M (62:) s
+52.2 658 M
+(Reading a token: --accepting rule at line 40 \("c"\)) s
+25.8 646 M (63:) s
+52.2 646 M
+(Next token is token IDENT \(0x5a1cfe0->{IDENT 6.2.5 "c":\)) s
+25.8 634 M (64:) s
+52.2 634 M
+(Shifting token IDENT \(0x5a1cfe0->{IDENT 6.2.5 "c":\)) s
+25.8 622 M (65:) s
+52.2 622 M
+(Entering state 5) s
+25.8 610 M (66:) s
+52.2 610 M
+(Reducing stack by rule 15 \(line 58\):) s
+25.8 598 M (67:) s
+52.2 598 M
+(   $1 = token IDENT \(0x5a1cfe0->{IDENT 6.2.5 "c":\)) s
+25.8 586 M (68:) s
+52.2 586 M
+(-> $$ = nterm expr \(0x5a1cfe0->{IDENT 6.2.5 "c":\)) s
+25.8 574 M (69:) s
+52.2 574 M
+(Stack now 0 2 11 16 24 19) s
+25.8 562 M (70:) s
+52.2 562 M
+(Entering state 27) s
+25.8 550 M (71:) s
+52.2 550 M
+(Reading a token: --accepting rule at line 42 \("+"\)) s
+25.8 538 M (72:) s
+52.2 538 M
+(Next token is token '+' \(0x5a1d120->{'+' 6.2.6 "+":\)) s
+25.8 526 M (73:) s
+52.2 526 M
+(Reducing stack by rule 9 \(line 52\):) s
+25.8 514 M (74:) s
+52.2 514 M
+(   $1 = nterm expr \(0x5a1ccc0->{IDENT 6.2.3 "b":\)) s
+25.8 502 M (75:) s
+52.2 502 M
+(   $2 = token '*' \(0x5a1ce00->{'*' 6.2.4 "*":\)) s
+25.8 490 M (76:) s
+52.2 490 M
+(   $3 = nterm expr \(0x5a1cfe0->{IDENT 6.2.5 "c":\)) s
+25.8 478 M (77:) s
+52.2 478 M
+(-> $$ = nterm expr \(0x5a1ce00->{'*' 6.2.4 "*": 0x5a1ccc0 0x5a1cfe0\)) s
+25.8 466 M (78:) s
+52.2 466 M
+(Stack now 0 2 11 16) s
+25.8 454 M (79:) s
+52.2 454 M
+(Entering state 24) s
+25.8 442 M (80:) s
+52.2 442 M
+(Next token is token '+' \(0x5a1d120->{'+' 6.2.6 "+":\)) s
+25.8 430 M (81:) s
+52.2 430 M
+(Shifting token '+' \(0x5a1d120->{'+' 6.2.6 "+":\)) s
+25.8 418 M (82:) s
+52.2 418 M
+(Entering state 17) s
+25.8 406 M (83:) s
+52.2 406 M
+(Reading a token: --accepting rule at line 40 \("d"\)) s
+25.8 394 M (84:) s
+52.2 394 M
+(Next token is token IDENT \(0x5a1d300->{IDENT 6.2.7 "d":\)) s
+25.8 382 M (85:) s
+52.2 382 M
+(Shifting token IDENT \(0x5a1d300->{IDENT 6.2.7 "d":\)) s
+25.8 370 M (86:) s
+52.2 370 M
+(Entering state 5) s
+25.8 358 M (87:) s
+52.2 358 M
+(Reducing stack by rule 15 \(line 58\):) s
+25.8 346 M (88:) s
+52.2 346 M
+(   $1 = token IDENT \(0x5a1d300->{IDENT 6.2.7 "d":\)) s
+25.8 334 M (89:) s
+52.2 334 M
+(-> $$ = nterm expr \(0x5a1d300->{IDENT 6.2.7 "d":\)) s
+25.8 322 M (90:) s
+52.2 322 M
+(Stack now 0 2 11 16 24 17) s
+25.8 310 M (91:) s
+52.2 310 M
+(Entering state 25) s
+25.8 298 M (92:) s
+52.2 298 M
+(Reading a token: --accepting rule at line 44 \("*"\)) s
+25.8 286 M (93:) s
+52.2 286 M
+(Next token is token '*' \(0x5a1d440->{'*' 6.2.8 "*":\)) s
+25.8 274 M (94:) s
+52.2 274 M
+(Shifting token '*' \(0x5a1d440->{'*' 6.2.8 "*":\)) s
+25.8 262 M (95:) s
+52.2 262 M
+(Entering state 19) s
+25.8 250 M (96:) s
+52.2 250 M
+(Reading a token: --accepting rule at line 40 \("e"\)) s
+25.8 238 M (97:) s
+52.2 238 M
+(Next token is token IDENT \(0x5a1d520->{IDENT 6.2.9 "e":\)) s
+25.8 226 M (98:) s
+52.2 226 M
+(Shifting token IDENT \(0x5a1d520->{IDENT 6.2.9 "e":\)) s
+25.8 214 M (99:) s
+52.2 214 M
+(Entering state 5) s
+19.2 202 M (100:) s
+52.2 202 M
+(Reducing stack by rule 15 \(line 58\):) s
+19.2 190 M (101:) s
+52.2 190 M
+(   $1 = token IDENT \(0x5a1d520->{IDENT 6.2.9 "e":\)) s
+19.2 178 M (102:) s
+52.2 178 M
+(-> $$ = nterm expr \(0x5a1d520->{IDENT 6.2.9 "e":\)) s
+19.2 166 M (103:) s
+52.2 166 M
+(Stack now 0 2 11 16 24 17 25 19) s
+19.2 154 M (104:) s
+52.2 154 M
+(Entering state 27) s
+19.2 142 M (105:) s
+52.2 142 M
+(Reading a token: --accepting rule at line 49 \(";"\)) s
+19.2 130 M (106:) s
+52.2 130 M
+(Next token is token ';' \(0x5a1d660->{';' 6.2.10 ";":\)) s
+19.2 118 M (107:) s
+52.2 118 M
+(Reducing stack by rule 9 \(line 52\):) s
+19.2 106 M (108:) s
+52.2 106 M
+(   $1 = nterm expr \(0x5a1d300->{IDENT 6.2.7 "d":\)) s
+19.2 94 M (109:) s
+52.2 94 M
+(   $2 = token '*' \(0x5a1d440->{'*' 6.2.8 "*":\)) s
+19.2 82 M (110:) s
+52.2 82 M
+(   $3 = nterm expr \(0x5a1d520->{IDENT 6.2.9 "e":\)) s
+19.2 70 M (111:) s
+52.2 70 M
+(-> $$ = nterm expr \(0x5a1d440->{'*' 6.2.8 "*": 0x5a1d300 0x5a1d520\)) s
+19.2 58 M (112:) s
+52.2 58 M
+(Stack now 0 2 11 16 24 17) s
+19.2 46 M (113:) s
+52.2 46 M
+(Entering state 25) s
+19.2 34 M (114:) s
+52.2 34 M
+(Next token is token ';' \(0x5a1d660->{';' 6.2.10 ";":\)) s
+19.2 22 M (115:) s
+52.2 22 M
+(Reducing stack by rule 7 \(line 50\):) s
+19.2 10 M (116:) s
+52.2 10 M
+(   $1 = nterm expr \(0x5a1ce00->{'*' 6.2.4 "*": 0x5a1ccc0 0x5a1cfe0\)) s
+_R
+S
+%%Page: (3) 13
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 3 def
+/fname (test1.err) def
+/fdir (.) def
+/ftail (test1.err) def
+% User defined strings:
+/pagenumstr (3) def
+/moddatestr (10/11/17) def
+/pagecountstr (/4) def
+/modtimestr (14:33:49) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (117:) s
+52.2 694 M
+(   $2 = token '+' \(0x5a1d120->{'+' 6.2.6 "+":\)) s
+19.2 682 M (118:) s
+52.2 682 M
+(   $3 = nterm expr \(0x5a1d440->{'*' 6.2.8 "*": 0x5a1d300 0x5a1d520\)) s
+19.2 670 M (119:) s
+52.2 670 M
+(-> $$ = nterm expr \(0x5a1d120->{'+' 6.2.6 "+": 0x5a1ce00 0x5a1d440\)) s
+19.2 658 M (120:) s
+52.2 658 M
+(Stack now 0 2 11 16) s
+19.2 646 M (121:) s
+52.2 646 M
+(Entering state 24) s
+19.2 634 M (122:) s
+52.2 634 M
+(Next token is token ';' \(0x5a1d660->{';' 6.2.10 ";":\)) s
+19.2 622 M (123:) s
+52.2 622 M
+(Reducing stack by rule 6 \(line 49\):) s
+19.2 610 M (124:) s
+52.2 610 M
+(   $1 = nterm expr \(0x5a1c9d0->{IDENT 6.2.1 "a":\)) s
+19.2 598 M (125:) s
+52.2 598 M
+(   $2 = token '=' \(0x5a1cb80->{'=' 6.2.2 "=":\)) s
+19.2 586 M (126:) s
+52.2 586 M
+(   $3 = nterm expr \(0x5a1d120->{'+' 6.2.6 "+": 0x5a1ce00 0x5a1d440\)) s
+19.2 574 M (127:) s
+52.2 574 M
+(-> $$ = nterm expr \(0x5a1cb80->{'=' 6.2.2 "=": 0x5a1c9d0 0x5a1d120\)) s
+19.2 562 M (128:) s
+52.2 562 M
+(Stack now 0 2) s
+19.2 550 M (129:) s
+52.2 550 M
+(Entering state 11) s
+19.2 538 M (130:) s
+52.2 538 M
+(Next token is token ';' \(0x5a1d660->{';' 6.2.10 ";":\)) s
+19.2 526 M (131:) s
+52.2 526 M
+(Shifting token ';' \(0x5a1d660->{';' 6.2.10 ";":\)) s
+19.2 514 M (132:) s
+52.2 514 M
+(Entering state 22) s
+19.2 502 M (133:) s
+52.2 502 M
+(Reducing stack by rule 2 \(line 43\):) s
+19.2 490 M (134:) s
+52.2 490 M
+(   $1 = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>":\)) s
+19.2 478 M (135:) s
+52.2 478 M
+(   $2 = nterm expr \(0x5a1cb80->{'=' 6.2.2 "=": 0x5a1c9d0 0x5a1d120\)) s
+19.2 466 M (136:) s
+52.2 466 M
+(   $3 = token ';' \(0x5a1d660->{';' 6.2.10 ";":\)) s
+19.2 454 M (137:) s
+52.2 454 M
+(Deleting astree \(0x5a1d660->{';' 6.2.10 ";":\)) s
+19.2 442 M (138:) s
+52.2 442 M
+(-> $$ = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cb80\)) s
+19.2 430 M (139:) s
+52.2 430 M
+(Stack now 0) s
+19.2 418 M (140:) s
+52.2 418 M
+(Entering state 2) s
+19.2 406 M (141:) s
+52.2 406 M
+(Reading a token: --accepting rule at line 37 \(") s
+19.2 394 M (142:) s
+52.2 394 M
+("\)) s
+19.2 382 M (143:) s
+52.2 382 M
+(--\(end of buffer or a NUL\)) s
+19.2 370 M (144:) s
+52.2 370 M
+(--EOF \(start condition 0\)) s
+19.2 358 M (145:) s
+52.2 358 M
+(Now at end of input.) s
+19.2 346 M (146:) s
+52.2 346 M
+(Reducing stack by rule 1 \(line 40\):) s
+19.2 334 M (147:) s
+52.2 334 M
+(   $1 = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cb80\)) s
+19.2 322 M (148:) s
+52.2 322 M
+(-> $$ = nterm program \(nullptr\)) s
+19.2 310 M (149:) s
+52.2 310 M
+(Stack now 0) s
+19.2 298 M (150:) s
+52.2 298 M
+(Entering state 1) s
+19.2 286 M (151:) s
+52.2 286 M
+(Now at end of input.) s
+19.2 274 M (152:) s
+52.2 274 M
+(Shifting token $end \(\)) s
+19.2 262 M (153:) s
+52.2 262 M
+(Entering state 3) s
+19.2 250 M (154:) s
+52.2 250 M
+(Stack now 0 1 3) s
+19.2 238 M (155:) s
+52.2 238 M
+(Cleanup: popping token $end \(\)) s
+19.2 226 M (156:) s
+52.2 226 M
+(Cleanup: popping nterm program \(nullptr\)) s
+19.2 214 M (157:) s
+52.2 214 M
+(Dumping parser::root:) s
+19.2 202 M (158:) s
+52.2 202 M
+(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cb80) s
+19.2 190 M (159:) s
+52.2 190 M
+(   0x5a1cb80->{'=' 6.2.2 "=": 0x5a1c9d0 0x5a1d120) s
+19.2 178 M (160:) s
+52.2 178 M
+(      0x5a1c9d0->{IDENT 6.2.1 "a":) s
+19.2 166 M (161:) s
+52.2 166 M
+(      0x5a1d120->{'+' 6.2.6 "+": 0x5a1ce00 0x5a1d440) s
+19.2 154 M (162:) s
+52.2 154 M
+(         0x5a1ce00->{'*' 6.2.4 "*": 0x5a1ccc0 0x5a1cfe0) s
+19.2 142 M (163:) s
+52.2 142 M
+(            0x5a1ccc0->{IDENT 6.2.3 "b":) s
+19.2 130 M (164:) s
+52.2 130 M
+(            0x5a1cfe0->{IDENT 6.2.5 "c":) s
+19.2 118 M (165:) s
+52.2 118 M
+(         0x5a1d440->{'*' 6.2.8 "*": 0x5a1d300 0x5a1d520) s
+19.2 106 M (166:) s
+52.2 106 M
+(            0x5a1d300->{IDENT 6.2.7 "d":) s
+19.2 94 M (167:) s
+52.2 94 M
+(            0x5a1d520->{IDENT 6.2.9 "e":) s
+19.2 82 M (168:) s
+52.2 82 M
+(Dumping string_set:) s
+19.2 70 M (169:) s
+52.2 70 M
+(string_set[   0]:   10959529184379665549 0x5a1d0c8->"c") s
+19.2 58 M (170:) s
+52.2 58 M
+(                    3729804957429652673 0x5a18418->"<<ROOT>>") s
+19.2 46 M (171:) s
+52.2 46 M
+(string_set[   1]:    2540012008095083820 0x5a1d608->"e") s
+19.2 34 M (172:) s
+52.2 34 M
+(                   11597697714117577063 0x5a1cc68->"=") s
+19.2 22 M (173:) s
+52.2 22 M
+(                   10838281452030117757 0x5a1cda8->"b") s
+19.2 10 M (174:) s
+52.2 10 M
+(string_set[   3]:    1370730858159036685 0x5a1d208->"+") s
+_R
+S
+%%Page: (4) 14
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 4 def
+/fname (test1.err) def
+/fdir (.) def
+/ftail (test1.err) def
+% User defined strings:
+/pagenumstr (4) def
+/moddatestr (10/11/17) def
+/pagecountstr (/4) def
+/modtimestr (14:33:49) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (175:) s
+52.2 694 M
+(                    6637313742931709005 0x5a1cee8->"*") s
+19.2 682 M (176:) s
+52.2 682 M
+(string_set[   4]:    5344662657899890615 0x5a1d748->";") s
+19.2 670 M (177:) s
+52.2 670 M
+(string_set[   5]:   14494284460613645429 0x5a1d3e8->"d") s
+19.2 658 M (178:) s
+52.2 658 M
+(string_set[   7]:    4993892634952068459 0x5a1cab8->"a") s
+19.2 646 M (179:) s
+52.2 646 M
+(load_factor = 0.909) s
+19.2 634 M (180:) s
+52.2 634 M
+(bucket_count = 11) s
+19.2 622 M (181:) s
+52.2 622 M
+(max_bucket_size = 3) s
+19.2 610 M (182:) s
+52.2 610 M
+(Deleting astree \(0x5a1d520->{IDENT 6.2.9 "e":\)) s
+19.2 598 M (183:) s
+52.2 598 M
+(Deleting astree \(0x5a1d300->{IDENT 6.2.7 "d":\)) s
+19.2 586 M (184:) s
+52.2 586 M
+(Deleting astree \(0x5a1d440->{'*' 6.2.8 "*":\)) s
+19.2 574 M (185:) s
+52.2 574 M
+(Deleting astree \(0x5a1cfe0->{IDENT 6.2.5 "c":\)) s
+19.2 562 M (186:) s
+52.2 562 M
+(Deleting astree \(0x5a1ccc0->{IDENT 6.2.3 "b":\)) s
+19.2 550 M (187:) s
+52.2 550 M
+(Deleting astree \(0x5a1ce00->{'*' 6.2.4 "*":\)) s
+19.2 538 M (188:) s
+52.2 538 M
+(Deleting astree \(0x5a1d120->{'+' 6.2.6 "+":\)) s
+19.2 526 M (189:) s
+52.2 526 M
+(Deleting astree \(0x5a1c9d0->{IDENT 6.2.1 "a":\)) s
+19.2 514 M (190:) s
+52.2 514 M
+(Deleting astree \(0x5a1cb80->{'=' 6.2.2 "=":\)) s
+19.2 502 M (191:) s
+52.2 502 M
+(Deleting astree \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>":\)) s
+_R
+S
+%%Page: (1) 15
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 1 def
+/fname (test1.log) def
+/fdir (.) def
+/ftail (test1.log) def
+% User defined strings:
+/pagenumstr (1) def
+/moddatestr (10/11/17) def
+/pagecountstr (/1) def
+/modtimestr (14:33:49) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+32.4 694 M (1:) s
+52.2 694 M
+(==13374== Memcheck, a memory error detector) s
+32.4 682 M (2:) s
+52.2 682 M
+(==13374== Copyright \(C\) 2002-2015, and GNU GPL'd, by Julian Seward et al) s
+5 670 M
+(.) s
+32.4 658 M (3:) s
+52.2 658 M
+(==13374== Using Valgrind-3.12.0 and LibVEX; rerun with -h for copyright ) s
+5 646 M
+(info) s
+32.4 634 M (4:) s
+52.2 634 M
+(==13374== Command: zexprsm -ly test1.in) s
+32.4 622 M (5:) s
+52.2 622 M
+(==13374== Parent PID: 13373) s
+32.4 610 M (6:) s
+52.2 610 M
+(==13374== ) s
+32.4 598 M (7:) s
+52.2 598 M
+(==13374== ) s
+32.4 586 M (8:) s
+52.2 586 M
+(==13374== HEAP SUMMARY:) s
+32.4 574 M (9:) s
+52.2 574 M
+(==13374==     in use at exit: 0 bytes in 0 blocks) s
+25.8 562 M (10:) s
+52.2 562 M
+(==13374==   total heap usage: 61 allocs, 61 frees, 18,675 bytes allocate) s
+5 550 M
+(d) s
+25.8 538 M (11:) s
+52.2 538 M
+(==13374== ) s
+25.8 526 M (12:) s
+52.2 526 M
+(==13374== All heap blocks were freed -- no leaks are possible) s
+25.8 514 M (13:) s
+52.2 514 M
+(==13374== ) s
+25.8 502 M (14:) s
+52.2 502 M
+(==13374== For counts of detected and suppressed errors, rerun with: -v) s
+25.8 490 M (15:) s
+52.2 490 M
+(==13374== ERROR SUMMARY: 0 errors from 0 contexts \(suppressed: 0 from 0\)) s
+25.8 478 M (16:) s
+52.2 478 M
+(EXIT STATUS = 0) s
+_R
+S
+%%Page: (1) 16
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 1 def
+/fname (test4.in) def
+/fdir (.) def
+/ftail (test4.in) def
+% User defined strings:
+/pagenumstr (1) def
+/moddatestr (10/11/17) def
+/pagecountstr (/1) def
+/modtimestr (14:33:49) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+32.4 694 M (1:) s
+52.2 694 M
+(// $Id: test4.in,v 1.2 2015-07-08 13:43:56-07 - - $) s
+32.4 682 M (2:) s
+52.2 682 M
+(#include "test4a.inh") s
+32.4 670 M (3:) s
+52.2 670 M
+(#include "test4b.inh") s
+32.4 658 M (4:) s
+52.2 658 M
+(3*4;) s
+_R
+S
+%%Page: (1) 17
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 1 def
+/fname (test4.out) def
+/fdir (.) def
+/ftail (test4.out) def
+% User defined strings:
+/pagenumstr (1) def
+/moddatestr (10/11/17) def
+/pagecountstr (/1) def
+/modtimestr (14:33:50) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+32.4 694 M (1:) s
+52.2 694 M
+(; 0.  1: # 1 "test4.in"; 1.  0: ) s
+32.4 682 M (2:) s
+52.2 682 M
+(; 1.  1: # 1 "<built-in>") s
+32.4 670 M (3:) s
+52.2 670 M
+(; 2.  1: # 1 "<command-line>") s
+32.4 658 M (4:) s
+52.2 658 M
+(; 3.  1: # 1 "/usr/include/stdc-predef.h" 1 3 4) s
+32.4 646 M (5:) s
+52.2 646 M
+(; 4.  1: # 1 "<command-line>" 2) s
+32.4 634 M (6:) s
+52.2 634 M
+(; 5.  1: # 1 "test4.in") s
+32.4 622 M (7:) s
+52.2 622 M
+(; 6.  1: ) s
+32.4 610 M (8:) s
+52.2 610 M
+(; 6.  2: # 1 "test4a.inh" 1) s
+32.4 598 M (9:) s
+52.2 598 M
+(; 7.  1: ) s
+25.8 586 M (10:) s
+52.2 586 M
+(; 7.  2: ) s
+25.8 574 M (11:) s
+52.2 574 M
+(; 7.  3: pi=3.141592653589793238462643383280;) s
+25.8 562 M (12:) s
+52.2 562 M
+(; 7.  4: pi;) s
+25.8 550 M (13:) s
+52.2 550 M
+(; 7.  5: # 3 "test4.in" 2) s
+25.8 538 M (14:) s
+52.2 538 M
+(; 8.  3: # 1 "test4b.inh" 1) s
+25.8 526 M (15:) s
+52.2 526 M
+(; 9.  1: ) s
+25.8 514 M (16:) s
+52.2 514 M
+(; 9.  2: a=pi*r^2;) s
+25.8 502 M (17:) s
+52.2 502 M
+(; 9.  3: 3.141592653589793238462643383280;) s
+25.8 490 M (18:) s
+52.2 490 M
+(; 9.  4: # 4 "test4.in" 2) s
+25.8 478 M (19:) s
+52.2 478 M
+(;10.  4: 3*4;) s
+25.8 466 M (20:) s
+52.2 466 M
+(; ROOT "<<ROOT>>" \(0.0.0\)) s
+25.8 454 M (21:) s
+52.2 454 M
+(;    '=' "=" \(7.3.3\)) s
+25.8 442 M (22:) s
+52.2 442 M
+(;       IDENT "pi" \(7.3.1\)) s
+25.8 430 M (23:) s
+52.2 430 M
+(;       NUMBER "3.141592653589793238462643383280" \(7.3.4\)) s
+25.8 418 M (24:) s
+52.2 418 M
+(;    IDENT "pi" \(7.4.1\)) s
+25.8 406 M (25:) s
+52.2 406 M
+(;    '=' "=" \(9.2.2\)) s
+25.8 394 M (26:) s
+52.2 394 M
+(;       IDENT "a" \(9.2.1\)) s
+25.8 382 M (27:) s
+52.2 382 M
+(;       '*' "*" \(9.2.5\)) s
+25.8 370 M (28:) s
+52.2 370 M
+(;          IDENT "pi" \(9.2.3\)) s
+25.8 358 M (29:) s
+52.2 358 M
+(;          '^' "^" \(9.2.7\)) s
+25.8 346 M (30:) s
+52.2 346 M
+(;             IDENT "r" \(9.2.6\)) s
+25.8 334 M (31:) s
+52.2 334 M
+(;             NUMBER "2" \(9.2.8\)) s
+25.8 322 M (32:) s
+52.2 322 M
+(;    NUMBER "3.141592653589793238462643383280" \(9.3.1\)) s
+25.8 310 M (33:) s
+52.2 310 M
+(;    '*' "*" \(10.4.2\)) s
+25.8 298 M (34:) s
+52.2 298 M
+(;       NUMBER "3" \(10.4.1\)) s
+25.8 286 M (35:) s
+52.2 286 M
+(;       NUMBER "4" \(10.4.3\)) s
+25.8 274 M (36:) s
+25.8 262 M (37:) s
+52.2 262 M
+(          pushnum   3.141592653589793238462643383280; test4a.inh 3.4) s
+25.8 250 M (38:) s
+52.2 250 M
+(          popvar    pi                  ; test4a.inh 3.1) s
+25.8 238 M (39:) s
+52.2 238 M
+(          pushvar   pi                  ; test4a.inh 4.1) s
+25.8 226 M (40:) s
+52.2 226 M
+(          pushvar   pi                  ; test4b.inh 2.3) s
+25.8 214 M (41:) s
+52.2 214 M
+(          pushvar   r                   ; test4b.inh 2.6) s
+25.8 202 M (42:) s
+52.2 202 M
+(          pushnum   2                   ; test4b.inh 2.8) s
+25.8 190 M (43:) s
+52.2 190 M
+(          pow                           ; test4b.inh 2.7) s
+25.8 178 M (44:) s
+52.2 178 M
+(          mul                           ; test4b.inh 2.5) s
+25.8 166 M (45:) s
+52.2 166 M
+(          popvar    a                   ; test4b.inh 2.1) s
+25.8 154 M (46:) s
+52.2 154 M
+(          pushnum   3.141592653589793238462643383280; test4b.inh 3.1) s
+25.8 142 M (47:) s
+52.2 142 M
+(          pushnum   3                   ; test4.in 4.1) s
+25.8 130 M (48:) s
+52.2 130 M
+(          pushnum   4                   ; test4.in 4.3) s
+25.8 118 M (49:) s
+52.2 118 M
+(          mul                           ; test4.in 4.2) s
+_R
+S
+%%Page: (1) 18
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 1 def
+/fname (test4.err) def
+/fdir (.) def
+/ftail (test4.err) def
+% User defined strings:
+/pagenumstr (1) def
+/moddatestr (10/11/17) def
+/pagecountstr (/7) def
+/modtimestr (14:33:50) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+32.4 694 M (1:) s
+52.2 694 M
+(Command: zexprsm -ly test4.in) s
+32.4 682 M (2:) s
+52.2 682 M
+(-- popen \(/usr/bin/cpp test4.in\), fileno\(yyin\) = 4) s
+32.4 670 M (3:) s
+52.2 670 M
+(Starting parse) s
+32.4 658 M (4:) s
+52.2 658 M
+(Entering state 0) s
+32.4 646 M (5:) s
+52.2 646 M
+(Reducing stack by rule 5 \(line 46\):) s
+32.4 634 M (6:) s
+52.2 634 M
+(-> $$ = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>":\)) s
+32.4 622 M (7:) s
+52.2 622 M
+(Stack now 0) s
+32.4 610 M (8:) s
+52.2 610 M
+(Entering state 2) s
+32.4 598 M (9:) s
+52.2 598 M
+(Reading a token: --\(end of buffer or a NUL\)) s
+25.8 586 M (10:) s
+52.2 586 M
+(--accepting rule at line 35 \("# 1 "test4.in""\)) s
+25.8 574 M (11:) s
+52.2 574 M
+(--included # 1 "test4.in") s
+25.8 562 M (12:) s
+52.2 562 M
+(--accepting rule at line 37 \(") s
+25.8 550 M (13:) s
+52.2 550 M
+("\)) s
+25.8 538 M (14:) s
+52.2 538 M
+(--accepting rule at line 35 \("# 1 "<built-in>""\)) s
+25.8 526 M (15:) s
+52.2 526 M
+(--included # 1 "<built-in>") s
+25.8 514 M (16:) s
+52.2 514 M
+(--accepting rule at line 37 \(") s
+25.8 502 M (17:) s
+52.2 502 M
+("\)) s
+25.8 490 M (18:) s
+52.2 490 M
+(--accepting rule at line 35 \("# 1 "<command-line>""\)) s
+25.8 478 M (19:) s
+52.2 478 M
+(--included # 1 "<command-line>") s
+25.8 466 M (20:) s
+52.2 466 M
+(--accepting rule at line 37 \(") s
+25.8 454 M (21:) s
+52.2 454 M
+("\)) s
+25.8 442 M (22:) s
+52.2 442 M
+(--accepting rule at line 35 \("# 1 "/usr/include/stdc-predef.h" 1 3 4"\)) s
+25.8 430 M (23:) s
+52.2 430 M
+(--included # 1 "/usr/include/stdc-predef.h") s
+25.8 418 M (24:) s
+52.2 418 M
+(--accepting rule at line 37 \(") s
+25.8 406 M (25:) s
+52.2 406 M
+("\)) s
+25.8 394 M (26:) s
+52.2 394 M
+(--accepting rule at line 35 \("# 1 "<command-line>" 2"\)) s
+25.8 382 M (27:) s
+52.2 382 M
+(--included # 1 "<command-line>") s
+25.8 370 M (28:) s
+52.2 370 M
+(--accepting rule at line 37 \(") s
+25.8 358 M (29:) s
+52.2 358 M
+("\)) s
+25.8 346 M (30:) s
+52.2 346 M
+(--accepting rule at line 35 \("# 1 "test4.in""\)) s
+25.8 334 M (31:) s
+52.2 334 M
+(--included # 1 "test4.in") s
+25.8 322 M (32:) s
+52.2 322 M
+(--accepting rule at line 37 \(") s
+25.8 310 M (33:) s
+52.2 310 M
+("\)) s
+25.8 298 M (34:) s
+52.2 298 M
+(--accepting rule at line 37 \(") s
+25.8 286 M (35:) s
+52.2 286 M
+("\)) s
+25.8 274 M (36:) s
+52.2 274 M
+(--accepting rule at line 35 \("# 1 "test4a.inh" 1"\)) s
+25.8 262 M (37:) s
+52.2 262 M
+(--included # 1 "test4a.inh") s
+25.8 250 M (38:) s
+52.2 250 M
+(--accepting rule at line 37 \(") s
+25.8 238 M (39:) s
+52.2 238 M
+("\)) s
+25.8 226 M (40:) s
+52.2 226 M
+(--accepting rule at line 37 \(") s
+25.8 214 M (41:) s
+52.2 214 M
+("\)) s
+25.8 202 M (42:) s
+52.2 202 M
+(--accepting rule at line 37 \(") s
+25.8 190 M (43:) s
+52.2 190 M
+("\)) s
+25.8 178 M (44:) s
+52.2 178 M
+(--accepting rule at line 40 \("pi"\)) s
+25.8 166 M (45:) s
+52.2 166 M
+(Next token is token IDENT \(0x5a1ca40->{IDENT 7.3.1 "pi":\)) s
+25.8 154 M (46:) s
+52.2 154 M
+(Shifting token IDENT \(0x5a1ca40->{IDENT 7.3.1 "pi":\)) s
+25.8 142 M (47:) s
+52.2 142 M
+(Entering state 5) s
+25.8 130 M (48:) s
+52.2 130 M
+(Reducing stack by rule 15 \(line 58\):) s
+25.8 118 M (49:) s
+52.2 118 M
+(   $1 = token IDENT \(0x5a1ca40->{IDENT 7.3.1 "pi":\)) s
+25.8 106 M (50:) s
+52.2 106 M
+(-> $$ = nterm expr \(0x5a1ca40->{IDENT 7.3.1 "pi":\)) s
+25.8 94 M (51:) s
+52.2 94 M
+(Stack now 0 2) s
+25.8 82 M (52:) s
+52.2 82 M
+(Entering state 11) s
+25.8 70 M (53:) s
+52.2 70 M
+(Reading a token: --accepting rule at line 41 \("="\)) s
+25.8 58 M (54:) s
+52.2 58 M
+(Next token is token '=' \(0x5a1cbf0->{'=' 7.3.3 "=":\)) s
+25.8 46 M (55:) s
+52.2 46 M
+(Shifting token '=' \(0x5a1cbf0->{'=' 7.3.3 "=":\)) s
+25.8 34 M (56:) s
+52.2 34 M
+(Entering state 16) s
+25.8 22 M (57:) s
+52.2 22 M
+(Reading a token: --accepting rule at line 39 \("3.14159265358979323846264) s
+5 10 M
+(3383280"\)) s
+_R
+S
+%%Page: (2) 19
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 2 def
+/fname (test4.err) def
+/fdir (.) def
+/ftail (test4.err) def
+% User defined strings:
+/pagenumstr (2) def
+/moddatestr (10/11/17) def
+/pagecountstr (/7) def
+/modtimestr (14:33:50) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+25.8 694 M (58:) s
+52.2 694 M
+(Next token is token NUMBER \(0x5a1cd30->{NUMBER 7.3.4 "3.1415926535897932) s
+5 682 M
+(38462643383280":\)) s
+25.8 670 M (59:) s
+52.2 670 M
+(Shifting token NUMBER \(0x5a1cd30->{NUMBER 7.3.4 "3.141592653589793238462) s
+5 658 M
+(643383280":\)) s
+25.8 646 M (60:) s
+52.2 646 M
+(Entering state 6) s
+25.8 634 M (61:) s
+52.2 634 M
+(Reducing stack by rule 16 \(line 59\):) s
+25.8 622 M (62:) s
+52.2 622 M
+(   $1 = token NUMBER \(0x5a1cd30->{NUMBER 7.3.4 "3.1415926535897932384626) s
+5 610 M
+(43383280":\)) s
+25.8 598 M (63:) s
+52.2 598 M
+(-> $$ = nterm expr \(0x5a1cd30->{NUMBER 7.3.4 "3.141592653589793238462643) s
+5 586 M
+(383280":\)) s
+25.8 574 M (64:) s
+52.2 574 M
+(Stack now 0 2 11 16) s
+25.8 562 M (65:) s
+52.2 562 M
+(Entering state 24) s
+25.8 550 M (66:) s
+52.2 550 M
+(Reading a token: --accepting rule at line 49 \(";"\)) s
+25.8 538 M (67:) s
+52.2 538 M
+(Next token is token ';' \(0x5a1ce90->{';' 7.3.36 ";":\)) s
+25.8 526 M (68:) s
+52.2 526 M
+(Reducing stack by rule 6 \(line 49\):) s
+25.8 514 M (69:) s
+52.2 514 M
+(   $1 = nterm expr \(0x5a1ca40->{IDENT 7.3.1 "pi":\)) s
+25.8 502 M (70:) s
+52.2 502 M
+(   $2 = token '=' \(0x5a1cbf0->{'=' 7.3.3 "=":\)) s
+25.8 490 M (71:) s
+52.2 490 M
+(   $3 = nterm expr \(0x5a1cd30->{NUMBER 7.3.4 "3.141592653589793238462643) s
+5 478 M
+(383280":\)) s
+25.8 466 M (72:) s
+52.2 466 M
+(-> $$ = nterm expr \(0x5a1cbf0->{'=' 7.3.3 "=": 0x5a1ca40 0x5a1cd30\)) s
+25.8 454 M (73:) s
+52.2 454 M
+(Stack now 0 2) s
+25.8 442 M (74:) s
+52.2 442 M
+(Entering state 11) s
+25.8 430 M (75:) s
+52.2 430 M
+(Next token is token ';' \(0x5a1ce90->{';' 7.3.36 ";":\)) s
+25.8 418 M (76:) s
+52.2 418 M
+(Shifting token ';' \(0x5a1ce90->{';' 7.3.36 ";":\)) s
+25.8 406 M (77:) s
+52.2 406 M
+(Entering state 22) s
+25.8 394 M (78:) s
+52.2 394 M
+(Reducing stack by rule 2 \(line 43\):) s
+25.8 382 M (79:) s
+52.2 382 M
+(   $1 = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>":\)) s
+25.8 370 M (80:) s
+52.2 370 M
+(   $2 = nterm expr \(0x5a1cbf0->{'=' 7.3.3 "=": 0x5a1ca40 0x5a1cd30\)) s
+25.8 358 M (81:) s
+52.2 358 M
+(   $3 = token ';' \(0x5a1ce90->{';' 7.3.36 ";":\)) s
+25.8 346 M (82:) s
+52.2 346 M
+(Deleting astree \(0x5a1ce90->{';' 7.3.36 ";":\)) s
+25.8 334 M (83:) s
+52.2 334 M
+(-> $$ = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0\)) s
+25.8 322 M (84:) s
+52.2 322 M
+(Stack now 0) s
+25.8 310 M (85:) s
+52.2 310 M
+(Entering state 2) s
+25.8 298 M (86:) s
+52.2 298 M
+(Reading a token: --accepting rule at line 37 \(") s
+25.8 286 M (87:) s
+52.2 286 M
+("\)) s
+25.8 274 M (88:) s
+52.2 274 M
+(--accepting rule at line 40 \("pi"\)) s
+25.8 262 M (89:) s
+52.2 262 M
+(Next token is token IDENT \(0x5a1d160->{IDENT 7.4.1 "pi":\)) s
+25.8 250 M (90:) s
+52.2 250 M
+(Shifting token IDENT \(0x5a1d160->{IDENT 7.4.1 "pi":\)) s
+25.8 238 M (91:) s
+52.2 238 M
+(Entering state 5) s
+25.8 226 M (92:) s
+52.2 226 M
+(Reducing stack by rule 15 \(line 58\):) s
+25.8 214 M (93:) s
+52.2 214 M
+(   $1 = token IDENT \(0x5a1d160->{IDENT 7.4.1 "pi":\)) s
+25.8 202 M (94:) s
+52.2 202 M
+(-> $$ = nterm expr \(0x5a1d160->{IDENT 7.4.1 "pi":\)) s
+25.8 190 M (95:) s
+52.2 190 M
+(Stack now 0 2) s
+25.8 178 M (96:) s
+52.2 178 M
+(Entering state 11) s
+25.8 166 M (97:) s
+52.2 166 M
+(Reading a token: --accepting rule at line 49 \(";"\)) s
+25.8 154 M (98:) s
+52.2 154 M
+(Next token is token ';' \(0x5a1d240->{';' 7.4.3 ";":\)) s
+25.8 142 M (99:) s
+52.2 142 M
+(Shifting token ';' \(0x5a1d240->{';' 7.4.3 ";":\)) s
+19.2 130 M (100:) s
+52.2 130 M
+(Entering state 22) s
+19.2 118 M (101:) s
+52.2 118 M
+(Reducing stack by rule 2 \(line 43\):) s
+19.2 106 M (102:) s
+52.2 106 M
+(   $1 = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0\)) s
+19.2 94 M (103:) s
+52.2 94 M
+(   $2 = nterm expr \(0x5a1d160->{IDENT 7.4.1 "pi":\)) s
+19.2 82 M (104:) s
+52.2 82 M
+(   $3 = token ';' \(0x5a1d240->{';' 7.4.3 ";":\)) s
+19.2 70 M (105:) s
+52.2 70 M
+(Deleting astree \(0x5a1d240->{';' 7.4.3 ";":\)) s
+19.2 58 M (106:) s
+52.2 58 M
+(-> $$ = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0 0x5a) s
+5 46 M
+(1d160\)) s
+19.2 34 M (107:) s
+52.2 34 M
+(Stack now 0) s
+19.2 22 M (108:) s
+52.2 22 M
+(Entering state 2) s
+19.2 10 M (109:) s
+52.2 10 M
+(Reading a token: --accepting rule at line 37 \(") s
+_R
+S
+%%Page: (3) 20
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 3 def
+/fname (test4.err) def
+/fdir (.) def
+/ftail (test4.err) def
+% User defined strings:
+/pagenumstr (3) def
+/moddatestr (10/11/17) def
+/pagecountstr (/7) def
+/modtimestr (14:33:50) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (110:) s
+52.2 694 M
+("\)) s
+19.2 682 M (111:) s
+52.2 682 M
+(--accepting rule at line 35 \("# 3 "test4.in" 2"\)) s
+19.2 670 M (112:) s
+52.2 670 M
+(--included # 3 "test4.in") s
+19.2 658 M (113:) s
+52.2 658 M
+(--accepting rule at line 37 \(") s
+19.2 646 M (114:) s
+52.2 646 M
+("\)) s
+19.2 634 M (115:) s
+52.2 634 M
+(--accepting rule at line 35 \("# 1 "test4b.inh" 1"\)) s
+19.2 622 M (116:) s
+52.2 622 M
+(--included # 1 "test4b.inh") s
+19.2 610 M (117:) s
+52.2 610 M
+(--accepting rule at line 37 \(") s
+19.2 598 M (118:) s
+52.2 598 M
+("\)) s
+19.2 586 M (119:) s
+52.2 586 M
+(--accepting rule at line 37 \(") s
+19.2 574 M (120:) s
+52.2 574 M
+("\)) s
+19.2 562 M (121:) s
+52.2 562 M
+(--accepting rule at line 40 \("a"\)) s
+19.2 550 M (122:) s
+52.2 550 M
+(Next token is token IDENT \(0x5a1d510->{IDENT 9.2.1 "a":\)) s
+19.2 538 M (123:) s
+52.2 538 M
+(Shifting token IDENT \(0x5a1d510->{IDENT 9.2.1 "a":\)) s
+19.2 526 M (124:) s
+52.2 526 M
+(Entering state 5) s
+19.2 514 M (125:) s
+52.2 514 M
+(Reducing stack by rule 15 \(line 58\):) s
+19.2 502 M (126:) s
+52.2 502 M
+(   $1 = token IDENT \(0x5a1d510->{IDENT 9.2.1 "a":\)) s
+19.2 490 M (127:) s
+52.2 490 M
+(-> $$ = nterm expr \(0x5a1d510->{IDENT 9.2.1 "a":\)) s
+19.2 478 M (128:) s
+52.2 478 M
+(Stack now 0 2) s
+19.2 466 M (129:) s
+52.2 466 M
+(Entering state 11) s
+19.2 454 M (130:) s
+52.2 454 M
+(Reading a token: --accepting rule at line 41 \("="\)) s
+19.2 442 M (131:) s
+52.2 442 M
+(Next token is token '=' \(0x5a1d650->{'=' 9.2.2 "=":\)) s
+19.2 430 M (132:) s
+52.2 430 M
+(Shifting token '=' \(0x5a1d650->{'=' 9.2.2 "=":\)) s
+19.2 418 M (133:) s
+52.2 418 M
+(Entering state 16) s
+19.2 406 M (134:) s
+52.2 406 M
+(Reading a token: --accepting rule at line 40 \("pi"\)) s
+19.2 394 M (135:) s
+52.2 394 M
+(Next token is token IDENT \(0x5a1d730->{IDENT 9.2.3 "pi":\)) s
+19.2 382 M (136:) s
+52.2 382 M
+(Shifting token IDENT \(0x5a1d730->{IDENT 9.2.3 "pi":\)) s
+19.2 370 M (137:) s
+52.2 370 M
+(Entering state 5) s
+19.2 358 M (138:) s
+52.2 358 M
+(Reducing stack by rule 15 \(line 58\):) s
+19.2 346 M (139:) s
+52.2 346 M
+(   $1 = token IDENT \(0x5a1d730->{IDENT 9.2.3 "pi":\)) s
+19.2 334 M (140:) s
+52.2 334 M
+(-> $$ = nterm expr \(0x5a1d730->{IDENT 9.2.3 "pi":\)) s
+19.2 322 M (141:) s
+52.2 322 M
+(Stack now 0 2 11 16) s
+19.2 310 M (142:) s
+52.2 310 M
+(Entering state 24) s
+19.2 298 M (143:) s
+52.2 298 M
+(Reading a token: --accepting rule at line 44 \("*"\)) s
+19.2 286 M (144:) s
+52.2 286 M
+(Next token is token '*' \(0x5a1d810->{'*' 9.2.5 "*":\)) s
+19.2 274 M (145:) s
+52.2 274 M
+(Shifting token '*' \(0x5a1d810->{'*' 9.2.5 "*":\)) s
+19.2 262 M (146:) s
+52.2 262 M
+(Entering state 19) s
+19.2 250 M (147:) s
+52.2 250 M
+(Reading a token: --accepting rule at line 40 \("r"\)) s
+19.2 238 M (148:) s
+52.2 238 M
+(Next token is token IDENT \(0x5a1d950->{IDENT 9.2.6 "r":\)) s
+19.2 226 M (149:) s
+52.2 226 M
+(Shifting token IDENT \(0x5a1d950->{IDENT 9.2.6 "r":\)) s
+19.2 214 M (150:) s
+52.2 214 M
+(Entering state 5) s
+19.2 202 M (151:) s
+52.2 202 M
+(Reducing stack by rule 15 \(line 58\):) s
+19.2 190 M (152:) s
+52.2 190 M
+(   $1 = token IDENT \(0x5a1d950->{IDENT 9.2.6 "r":\)) s
+19.2 178 M (153:) s
+52.2 178 M
+(-> $$ = nterm expr \(0x5a1d950->{IDENT 9.2.6 "r":\)) s
+19.2 166 M (154:) s
+52.2 166 M
+(Stack now 0 2 11 16 24 19) s
+19.2 154 M (155:) s
+52.2 154 M
+(Entering state 27) s
+19.2 142 M (156:) s
+52.2 142 M
+(Reading a token: --accepting rule at line 46 \("^"\)) s
+19.2 130 M (157:) s
+52.2 130 M
+(Next token is token '^' \(0x5a1da90->{'^' 9.2.7 "^":\)) s
+19.2 118 M (158:) s
+52.2 118 M
+(Shifting token '^' \(0x5a1da90->{'^' 9.2.7 "^":\)) s
+19.2 106 M (159:) s
+52.2 106 M
+(Entering state 21) s
+19.2 94 M (160:) s
+52.2 94 M
+(Reading a token: --accepting rule at line 39 \("2"\)) s
+19.2 82 M (161:) s
+52.2 82 M
+(Next token is token NUMBER \(0x5a1dbd0->{NUMBER 9.2.8 "2":\)) s
+19.2 70 M (162:) s
+52.2 70 M
+(Shifting token NUMBER \(0x5a1dbd0->{NUMBER 9.2.8 "2":\)) s
+19.2 58 M (163:) s
+52.2 58 M
+(Entering state 6) s
+19.2 46 M (164:) s
+52.2 46 M
+(Reducing stack by rule 16 \(line 59\):) s
+19.2 34 M (165:) s
+52.2 34 M
+(   $1 = token NUMBER \(0x5a1dbd0->{NUMBER 9.2.8 "2":\)) s
+19.2 22 M (166:) s
+52.2 22 M
+(-> $$ = nterm expr \(0x5a1dbd0->{NUMBER 9.2.8 "2":\)) s
+19.2 10 M (167:) s
+52.2 10 M
+(Stack now 0 2 11 16 24 19 27 21) s
+_R
+S
+%%Page: (4) 21
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 4 def
+/fname (test4.err) def
+/fdir (.) def
+/ftail (test4.err) def
+% User defined strings:
+/pagenumstr (4) def
+/moddatestr (10/11/17) def
+/pagecountstr (/7) def
+/modtimestr (14:33:50) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (168:) s
+52.2 694 M
+(Entering state 29) s
+19.2 682 M (169:) s
+52.2 682 M
+(Reading a token: --accepting rule at line 49 \(";"\)) s
+19.2 670 M (170:) s
+52.2 670 M
+(Next token is token ';' \(0x5a1dd10->{';' 9.2.9 ";":\)) s
+19.2 658 M (171:) s
+52.2 658 M
+(Reducing stack by rule 11 \(line 54\):) s
+19.2 646 M (172:) s
+52.2 646 M
+(   $1 = nterm expr \(0x5a1d950->{IDENT 9.2.6 "r":\)) s
+19.2 634 M (173:) s
+52.2 634 M
+(   $2 = token '^' \(0x5a1da90->{'^' 9.2.7 "^":\)) s
+19.2 622 M (174:) s
+52.2 622 M
+(   $3 = nterm expr \(0x5a1dbd0->{NUMBER 9.2.8 "2":\)) s
+19.2 610 M (175:) s
+52.2 610 M
+(-> $$ = nterm expr \(0x5a1da90->{'^' 9.2.7 "^": 0x5a1d950 0x5a1dbd0\)) s
+19.2 598 M (176:) s
+52.2 598 M
+(Stack now 0 2 11 16 24 19) s
+19.2 586 M (177:) s
+52.2 586 M
+(Entering state 27) s
+19.2 574 M (178:) s
+52.2 574 M
+(Next token is token ';' \(0x5a1dd10->{';' 9.2.9 ";":\)) s
+19.2 562 M (179:) s
+52.2 562 M
+(Reducing stack by rule 9 \(line 52\):) s
+19.2 550 M (180:) s
+52.2 550 M
+(   $1 = nterm expr \(0x5a1d730->{IDENT 9.2.3 "pi":\)) s
+19.2 538 M (181:) s
+52.2 538 M
+(   $2 = token '*' \(0x5a1d810->{'*' 9.2.5 "*":\)) s
+19.2 526 M (182:) s
+52.2 526 M
+(   $3 = nterm expr \(0x5a1da90->{'^' 9.2.7 "^": 0x5a1d950 0x5a1dbd0\)) s
+19.2 514 M (183:) s
+52.2 514 M
+(-> $$ = nterm expr \(0x5a1d810->{'*' 9.2.5 "*": 0x5a1d730 0x5a1da90\)) s
+19.2 502 M (184:) s
+52.2 502 M
+(Stack now 0 2 11 16) s
+19.2 490 M (185:) s
+52.2 490 M
+(Entering state 24) s
+19.2 478 M (186:) s
+52.2 478 M
+(Next token is token ';' \(0x5a1dd10->{';' 9.2.9 ";":\)) s
+19.2 466 M (187:) s
+52.2 466 M
+(Reducing stack by rule 6 \(line 49\):) s
+19.2 454 M (188:) s
+52.2 454 M
+(   $1 = nterm expr \(0x5a1d510->{IDENT 9.2.1 "a":\)) s
+19.2 442 M (189:) s
+52.2 442 M
+(   $2 = token '=' \(0x5a1d650->{'=' 9.2.2 "=":\)) s
+19.2 430 M (190:) s
+52.2 430 M
+(   $3 = nterm expr \(0x5a1d810->{'*' 9.2.5 "*": 0x5a1d730 0x5a1da90\)) s
+19.2 418 M (191:) s
+52.2 418 M
+(-> $$ = nterm expr \(0x5a1d650->{'=' 9.2.2 "=": 0x5a1d510 0x5a1d810\)) s
+19.2 406 M (192:) s
+52.2 406 M
+(Stack now 0 2) s
+19.2 394 M (193:) s
+52.2 394 M
+(Entering state 11) s
+19.2 382 M (194:) s
+52.2 382 M
+(Next token is token ';' \(0x5a1dd10->{';' 9.2.9 ";":\)) s
+19.2 370 M (195:) s
+52.2 370 M
+(Shifting token ';' \(0x5a1dd10->{';' 9.2.9 ";":\)) s
+19.2 358 M (196:) s
+52.2 358 M
+(Entering state 22) s
+19.2 346 M (197:) s
+52.2 346 M
+(Reducing stack by rule 2 \(line 43\):) s
+19.2 334 M (198:) s
+52.2 334 M
+(   $1 = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0 0x5a) s
+5 322 M
+(1d160\)) s
+19.2 310 M (199:) s
+52.2 310 M
+(   $2 = nterm expr \(0x5a1d650->{'=' 9.2.2 "=": 0x5a1d510 0x5a1d810\)) s
+19.2 298 M (200:) s
+52.2 298 M
+(   $3 = token ';' \(0x5a1dd10->{';' 9.2.9 ";":\)) s
+19.2 286 M (201:) s
+52.2 286 M
+(Deleting astree \(0x5a1dd10->{';' 9.2.9 ";":\)) s
+19.2 274 M (202:) s
+52.2 274 M
+(-> $$ = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0 0x5a) s
+5 262 M
+(1d160 0x5a1d650\)) s
+19.2 250 M (203:) s
+52.2 250 M
+(Stack now 0) s
+19.2 238 M (204:) s
+52.2 238 M
+(Entering state 2) s
+19.2 226 M (205:) s
+52.2 226 M
+(Reading a token: --accepting rule at line 37 \(") s
+19.2 214 M (206:) s
+52.2 214 M
+("\)) s
+19.2 202 M (207:) s
+52.2 202 M
+(--accepting rule at line 39 \("3.141592653589793238462643383280"\)) s
+19.2 190 M (208:) s
+52.2 190 M
+(Next token is token NUMBER \(0x5a1e030->{NUMBER 9.3.1 "3.1415926535897932) s
+5 178 M
+(38462643383280":\)) s
+19.2 166 M (209:) s
+52.2 166 M
+(Shifting token NUMBER \(0x5a1e030->{NUMBER 9.3.1 "3.141592653589793238462) s
+5 154 M
+(643383280":\)) s
+19.2 142 M (210:) s
+52.2 142 M
+(Entering state 6) s
+19.2 130 M (211:) s
+52.2 130 M
+(Reducing stack by rule 16 \(line 59\):) s
+19.2 118 M (212:) s
+52.2 118 M
+(   $1 = token NUMBER \(0x5a1e030->{NUMBER 9.3.1 "3.1415926535897932384626) s
+5 106 M
+(43383280":\)) s
+19.2 94 M (213:) s
+52.2 94 M
+(-> $$ = nterm expr \(0x5a1e030->{NUMBER 9.3.1 "3.141592653589793238462643) s
+5 82 M
+(383280":\)) s
+19.2 70 M (214:) s
+52.2 70 M
+(Stack now 0 2) s
+19.2 58 M (215:) s
+52.2 58 M
+(Entering state 11) s
+19.2 46 M (216:) s
+52.2 46 M
+(Reading a token: --accepting rule at line 49 \(";"\)) s
+19.2 34 M (217:) s
+52.2 34 M
+(Next token is token ';' \(0x5a1e130->{';' 9.3.33 ";":\)) s
+19.2 22 M (218:) s
+52.2 22 M
+(Shifting token ';' \(0x5a1e130->{';' 9.3.33 ";":\)) s
+19.2 10 M (219:) s
+52.2 10 M
+(Entering state 22) s
+_R
+S
+%%Page: (5) 22
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 5 def
+/fname (test4.err) def
+/fdir (.) def
+/ftail (test4.err) def
+% User defined strings:
+/pagenumstr (5) def
+/moddatestr (10/11/17) def
+/pagecountstr (/7) def
+/modtimestr (14:33:50) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (220:) s
+52.2 694 M
+(Reducing stack by rule 2 \(line 43\):) s
+19.2 682 M (221:) s
+52.2 682 M
+(   $1 = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0 0x5a) s
+5 670 M
+(1d160 0x5a1d650\)) s
+19.2 658 M (222:) s
+52.2 658 M
+(   $2 = nterm expr \(0x5a1e030->{NUMBER 9.3.1 "3.141592653589793238462643) s
+5 646 M
+(383280":\)) s
+19.2 634 M (223:) s
+52.2 634 M
+(   $3 = token ';' \(0x5a1e130->{';' 9.3.33 ";":\)) s
+19.2 622 M (224:) s
+52.2 622 M
+(Deleting astree \(0x5a1e130->{';' 9.3.33 ";":\)) s
+19.2 610 M (225:) s
+52.2 610 M
+(-> $$ = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0 0x5a) s
+5 598 M
+(1d160 0x5a1d650 0x5a1e030\)) s
+19.2 586 M (226:) s
+52.2 586 M
+(Stack now 0) s
+19.2 574 M (227:) s
+52.2 574 M
+(Entering state 2) s
+19.2 562 M (228:) s
+52.2 562 M
+(Reading a token: --accepting rule at line 37 \(") s
+19.2 550 M (229:) s
+52.2 550 M
+("\)) s
+19.2 538 M (230:) s
+52.2 538 M
+(--accepting rule at line 35 \("# 4 "test4.in" 2"\)) s
+19.2 526 M (231:) s
+52.2 526 M
+(--included # 4 "test4.in") s
+19.2 514 M (232:) s
+52.2 514 M
+(--accepting rule at line 37 \(") s
+19.2 502 M (233:) s
+52.2 502 M
+("\)) s
+19.2 490 M (234:) s
+52.2 490 M
+(--accepting rule at line 39 \("3"\)) s
+19.2 478 M (235:) s
+52.2 478 M
+(Next token is token NUMBER \(0x5a1e280->{NUMBER 10.4.1 "3":\)) s
+19.2 466 M (236:) s
+52.2 466 M
+(Shifting token NUMBER \(0x5a1e280->{NUMBER 10.4.1 "3":\)) s
+19.2 454 M (237:) s
+52.2 454 M
+(Entering state 6) s
+19.2 442 M (238:) s
+52.2 442 M
+(Reducing stack by rule 16 \(line 59\):) s
+19.2 430 M (239:) s
+52.2 430 M
+(   $1 = token NUMBER \(0x5a1e280->{NUMBER 10.4.1 "3":\)) s
+19.2 418 M (240:) s
+52.2 418 M
+(-> $$ = nterm expr \(0x5a1e280->{NUMBER 10.4.1 "3":\)) s
+19.2 406 M (241:) s
+52.2 406 M
+(Stack now 0 2) s
+19.2 394 M (242:) s
+52.2 394 M
+(Entering state 11) s
+19.2 382 M (243:) s
+52.2 382 M
+(Reading a token: --accepting rule at line 44 \("*"\)) s
+19.2 370 M (244:) s
+52.2 370 M
+(Next token is token '*' \(0x5a1e4c0->{'*' 10.4.2 "*":\)) s
+19.2 358 M (245:) s
+52.2 358 M
+(Shifting token '*' \(0x5a1e4c0->{'*' 10.4.2 "*":\)) s
+19.2 346 M (246:) s
+52.2 346 M
+(Entering state 19) s
+19.2 334 M (247:) s
+52.2 334 M
+(Reading a token: --accepting rule at line 39 \("4"\)) s
+19.2 322 M (248:) s
+52.2 322 M
+(Next token is token NUMBER \(0x5a1e5a0->{NUMBER 10.4.3 "4":\)) s
+19.2 310 M (249:) s
+52.2 310 M
+(Shifting token NUMBER \(0x5a1e5a0->{NUMBER 10.4.3 "4":\)) s
+19.2 298 M (250:) s
+52.2 298 M
+(Entering state 6) s
+19.2 286 M (251:) s
+52.2 286 M
+(Reducing stack by rule 16 \(line 59\):) s
+19.2 274 M (252:) s
+52.2 274 M
+(   $1 = token NUMBER \(0x5a1e5a0->{NUMBER 10.4.3 "4":\)) s
+19.2 262 M (253:) s
+52.2 262 M
+(-> $$ = nterm expr \(0x5a1e5a0->{NUMBER 10.4.3 "4":\)) s
+19.2 250 M (254:) s
+52.2 250 M
+(Stack now 0 2 11 19) s
+19.2 238 M (255:) s
+52.2 238 M
+(Entering state 27) s
+19.2 226 M (256:) s
+52.2 226 M
+(Reading a token: --accepting rule at line 49 \(";"\)) s
+19.2 214 M (257:) s
+52.2 214 M
+(Next token is token ';' \(0x5a1e6e0->{';' 10.4.4 ";":\)) s
+19.2 202 M (258:) s
+52.2 202 M
+(Reducing stack by rule 9 \(line 52\):) s
+19.2 190 M (259:) s
+52.2 190 M
+(   $1 = nterm expr \(0x5a1e280->{NUMBER 10.4.1 "3":\)) s
+19.2 178 M (260:) s
+52.2 178 M
+(   $2 = token '*' \(0x5a1e4c0->{'*' 10.4.2 "*":\)) s
+19.2 166 M (261:) s
+52.2 166 M
+(   $3 = nterm expr \(0x5a1e5a0->{NUMBER 10.4.3 "4":\)) s
+19.2 154 M (262:) s
+52.2 154 M
+(-> $$ = nterm expr \(0x5a1e4c0->{'*' 10.4.2 "*": 0x5a1e280 0x5a1e5a0\)) s
+19.2 142 M (263:) s
+52.2 142 M
+(Stack now 0 2) s
+19.2 130 M (264:) s
+52.2 130 M
+(Entering state 11) s
+19.2 118 M (265:) s
+52.2 118 M
+(Next token is token ';' \(0x5a1e6e0->{';' 10.4.4 ";":\)) s
+19.2 106 M (266:) s
+52.2 106 M
+(Shifting token ';' \(0x5a1e6e0->{';' 10.4.4 ";":\)) s
+19.2 94 M (267:) s
+52.2 94 M
+(Entering state 22) s
+19.2 82 M (268:) s
+52.2 82 M
+(Reducing stack by rule 2 \(line 43\):) s
+19.2 70 M (269:) s
+52.2 70 M
+(   $1 = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0 0x5a) s
+5 58 M
+(1d160 0x5a1d650 0x5a1e030\)) s
+19.2 46 M (270:) s
+52.2 46 M
+(   $2 = nterm expr \(0x5a1e4c0->{'*' 10.4.2 "*": 0x5a1e280 0x5a1e5a0\)) s
+19.2 34 M (271:) s
+52.2 34 M
+(   $3 = token ';' \(0x5a1e6e0->{';' 10.4.4 ";":\)) s
+19.2 22 M (272:) s
+52.2 22 M
+(Deleting astree \(0x5a1e6e0->{';' 10.4.4 ";":\)) s
+19.2 10 M (273:) s
+52.2 10 M
+(-> $$ = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0 0x5a) s
+_R
+S
+%%Page: (6) 23
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 6 def
+/fname (test4.err) def
+/fdir (.) def
+/ftail (test4.err) def
+% User defined strings:
+/pagenumstr (6) def
+/moddatestr (10/11/17) def
+/pagecountstr (/7) def
+/modtimestr (14:33:50) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+5 694 M
+(1d160 0x5a1d650 0x5a1e030 0x5a1e4c0\)) s
+19.2 682 M (274:) s
+52.2 682 M
+(Stack now 0) s
+19.2 670 M (275:) s
+52.2 670 M
+(Entering state 2) s
+19.2 658 M (276:) s
+52.2 658 M
+(Reading a token: --accepting rule at line 37 \(") s
+19.2 646 M (277:) s
+52.2 646 M
+("\)) s
+19.2 634 M (278:) s
+52.2 634 M
+(--\(end of buffer or a NUL\)) s
+19.2 622 M (279:) s
+52.2 622 M
+(--EOF \(start condition 0\)) s
+19.2 610 M (280:) s
+52.2 610 M
+(Now at end of input.) s
+19.2 598 M (281:) s
+52.2 598 M
+(Reducing stack by rule 1 \(line 40\):) s
+19.2 586 M (282:) s
+52.2 586 M
+(   $1 = nterm stmtseq \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0 0x5a) s
+5 574 M
+(1d160 0x5a1d650 0x5a1e030 0x5a1e4c0\)) s
+19.2 562 M (283:) s
+52.2 562 M
+(-> $$ = nterm program \(nullptr\)) s
+19.2 550 M (284:) s
+52.2 550 M
+(Stack now 0) s
+19.2 538 M (285:) s
+52.2 538 M
+(Entering state 1) s
+19.2 526 M (286:) s
+52.2 526 M
+(Now at end of input.) s
+19.2 514 M (287:) s
+52.2 514 M
+(Shifting token $end \(\)) s
+19.2 502 M (288:) s
+52.2 502 M
+(Entering state 3) s
+19.2 490 M (289:) s
+52.2 490 M
+(Stack now 0 1 3) s
+19.2 478 M (290:) s
+52.2 478 M
+(Cleanup: popping token $end \(\)) s
+19.2 466 M (291:) s
+52.2 466 M
+(Cleanup: popping nterm program \(nullptr\)) s
+19.2 454 M (292:) s
+52.2 454 M
+(Dumping parser::root:) s
+19.2 442 M (293:) s
+52.2 442 M
+(0x5a18320->{ROOT 0.0.0 "<<ROOT>>": 0x5a1cbf0 0x5a1d160 0x5a1d650 0x5a1e0) s
+5 430 M
+(30 0x5a1e4c0) s
+19.2 418 M (294:) s
+52.2 418 M
+(   0x5a1cbf0->{'=' 7.3.3 "=": 0x5a1ca40 0x5a1cd30) s
+19.2 406 M (295:) s
+52.2 406 M
+(      0x5a1ca40->{IDENT 7.3.1 "pi":) s
+19.2 394 M (296:) s
+52.2 394 M
+(      0x5a1cd30->{NUMBER 7.3.4 "3.141592653589793238462643383280":) s
+19.2 382 M (297:) s
+52.2 382 M
+(   0x5a1d160->{IDENT 7.4.1 "pi":) s
+19.2 370 M (298:) s
+52.2 370 M
+(   0x5a1d650->{'=' 9.2.2 "=": 0x5a1d510 0x5a1d810) s
+19.2 358 M (299:) s
+52.2 358 M
+(      0x5a1d510->{IDENT 9.2.1 "a":) s
+19.2 346 M (300:) s
+52.2 346 M
+(      0x5a1d810->{'*' 9.2.5 "*": 0x5a1d730 0x5a1da90) s
+19.2 334 M (301:) s
+52.2 334 M
+(         0x5a1d730->{IDENT 9.2.3 "pi":) s
+19.2 322 M (302:) s
+52.2 322 M
+(         0x5a1da90->{'^' 9.2.7 "^": 0x5a1d950 0x5a1dbd0) s
+19.2 310 M (303:) s
+52.2 310 M
+(            0x5a1d950->{IDENT 9.2.6 "r":) s
+19.2 298 M (304:) s
+52.2 298 M
+(            0x5a1dbd0->{NUMBER 9.2.8 "2":) s
+19.2 286 M (305:) s
+52.2 286 M
+(   0x5a1e030->{NUMBER 9.3.1 "3.141592653589793238462643383280":) s
+19.2 274 M (306:) s
+52.2 274 M
+(   0x5a1e4c0->{'*' 10.4.2 "*": 0x5a1e280 0x5a1e5a0) s
+19.2 262 M (307:) s
+52.2 262 M
+(      0x5a1e280->{NUMBER 10.4.1 "3":) s
+19.2 250 M (308:) s
+52.2 250 M
+(      0x5a1e5a0->{NUMBER 10.4.3 "4":) s
+19.2 238 M (309:) s
+52.2 238 M
+(Dumping string_set:) s
+19.2 226 M (310:) s
+52.2 226 M
+(string_set[   3]:    8248777770799913213 0x5a1e368->"3") s
+19.2 214 M (311:) s
+52.2 214 M
+(                    6637313742931709005 0x5a1d8f8->"*") s
+19.2 202 M (312:) s
+52.2 202 M
+(                   11597697714117577063 0x5a1ccd8->"=") s
+19.2 190 M (313:) s
+52.2 190 M
+(                    5344662657899890615 0x5a1cf78->";") s
+19.2 178 M (314:) s
+52.2 178 M
+(string_set[   6]:    3729804957429652673 0x5a18418->"<<ROOT>>") s
+19.2 166 M (315:) s
+52.2 166 M
+(string_set[   9]:    4551451650890805270 0x5a1dcb8->"2") s
+19.2 154 M (316:) s
+52.2 154 M
+(string_set[  11]:    1998636459596678225 0x5a1db78->"^") s
+19.2 142 M (317:) s
+52.2 142 M
+(string_set[  12]:   15530967369654070964 0x5a1cb28->"pi") s
+19.2 130 M (318:) s
+52.2 130 M
+(                   14518329498511883088 0x5a1da38->"r") s
+19.2 118 M (319:) s
+52.2 118 M
+(string_set[  17]:    4993892634952068459 0x5a1d5f8->"a") s
+19.2 106 M (320:) s
+52.2 106 M
+(string_set[  20]:   17027087115628340017 0x5a1ce38->"3.14159265358979323) s
+5 94 M
+(8462643383280") s
+19.2 82 M (321:) s
+52.2 82 M
+(string_set[  21]:   16215888864653804456 0x5a1e688->"4") s
+19.2 70 M (322:) s
+52.2 70 M
+(load_factor = 0.522) s
+19.2 58 M (323:) s
+52.2 58 M
+(bucket_count = 23) s
+19.2 46 M (324:) s
+52.2 46 M
+(max_bucket_size = 4) s
+19.2 34 M (325:) s
+52.2 34 M
+(Deleting astree \(0x5a1e5a0->{NUMBER 10.4.3 "4":\)) s
+19.2 22 M (326:) s
+52.2 22 M
+(Deleting astree \(0x5a1e280->{NUMBER 10.4.1 "3":\)) s
+19.2 10 M (327:) s
+52.2 10 M
+(Deleting astree \(0x5a1e4c0->{'*' 10.4.2 "*":\)) s
+_R
+S
+%%Page: (7) 24
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 7 def
+/fname (test4.err) def
+/fdir (.) def
+/ftail (test4.err) def
+% User defined strings:
+/pagenumstr (7) def
+/moddatestr (10/11/17) def
+/pagecountstr (/7) def
+/modtimestr (14:33:50) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+19.2 694 M (328:) s
+52.2 694 M
+(Deleting astree \(0x5a1e030->{NUMBER 9.3.1 "3.141592653589793238462643383) s
+5 682 M
+(280":\)) s
+19.2 670 M (329:) s
+52.2 670 M
+(Deleting astree \(0x5a1dbd0->{NUMBER 9.2.8 "2":\)) s
+19.2 658 M (330:) s
+52.2 658 M
+(Deleting astree \(0x5a1d950->{IDENT 9.2.6 "r":\)) s
+19.2 646 M (331:) s
+52.2 646 M
+(Deleting astree \(0x5a1da90->{'^' 9.2.7 "^":\)) s
+19.2 634 M (332:) s
+52.2 634 M
+(Deleting astree \(0x5a1d730->{IDENT 9.2.3 "pi":\)) s
+19.2 622 M (333:) s
+52.2 622 M
+(Deleting astree \(0x5a1d810->{'*' 9.2.5 "*":\)) s
+19.2 610 M (334:) s
+52.2 610 M
+(Deleting astree \(0x5a1d510->{IDENT 9.2.1 "a":\)) s
+19.2 598 M (335:) s
+52.2 598 M
+(Deleting astree \(0x5a1d650->{'=' 9.2.2 "=":\)) s
+19.2 586 M (336:) s
+52.2 586 M
+(Deleting astree \(0x5a1d160->{IDENT 7.4.1 "pi":\)) s
+19.2 574 M (337:) s
+52.2 574 M
+(Deleting astree \(0x5a1cd30->{NUMBER 7.3.4 "3.141592653589793238462643383) s
+5 562 M
+(280":\)) s
+19.2 550 M (338:) s
+52.2 550 M
+(Deleting astree \(0x5a1ca40->{IDENT 7.3.1 "pi":\)) s
+19.2 538 M (339:) s
+52.2 538 M
+(Deleting astree \(0x5a1cbf0->{'=' 7.3.3 "=":\)) s
+19.2 526 M (340:) s
+52.2 526 M
+(Deleting astree \(0x5a18320->{ROOT 0.0.0 "<<ROOT>>":\)) s
+_R
+S
+%%Page: (1) 25
+%%BeginPageSetup
+_S
+38 24 translate
+/pagenum 1 def
+/fname (test4.log) def
+/fdir (.) def
+/ftail (test4.log) def
+% User defined strings:
+/pagenumstr (1) def
+/moddatestr (10/11/17) def
+/pagecountstr (/1) def
+/modtimestr (14:33:50) def
+/user_header_p true def
+/user_header_left_str ($cmps104a-wm/Examples/e08.expr-smc/) def
+/user_header_center_str () def
+/user_header_right_str () def
+/user_footer_p false def
+%%EndPageSetup
+column_borders
+do_header
+32.4 694 M (1:) s
+52.2 694 M
+(==13378== Memcheck, a memory error detector) s
+32.4 682 M (2:) s
+52.2 682 M
+(==13378== Copyright \(C\) 2002-2015, and GNU GPL'd, by Julian Seward et al) s
+5 670 M
+(.) s
+32.4 658 M (3:) s
+52.2 658 M
+(==13378== Using Valgrind-3.12.0 and LibVEX; rerun with -h for copyright ) s
+5 646 M
+(info) s
+32.4 634 M (4:) s
+52.2 634 M
+(==13378== Command: zexprsm -ly test4.in) s
+32.4 622 M (5:) s
+52.2 622 M
+(==13378== Parent PID: 13377) s
+32.4 610 M (6:) s
+52.2 610 M
+(==13378== ) s
+32.4 598 M (7:) s
+52.2 598 M
+(==13378== ) s
+32.4 586 M (8:) s
+52.2 586 M
+(==13378== HEAP SUMMARY:) s
+32.4 574 M (9:) s
+52.2 574 M
+(==13378==     in use at exit: 0 bytes in 0 blocks) s
+25.8 562 M (10:) s
+52.2 562 M
+(==13378==   total heap usage: 94 allocs, 94 frees, 20,272 bytes allocate) s
+5 550 M
+(d) s
+25.8 538 M (11:) s
+52.2 538 M
+(==13378== ) s
+25.8 526 M (12:) s
+52.2 526 M
+(==13378== All heap blocks were freed -- no leaks are possible) s
+25.8 514 M (13:) s
+52.2 514 M
+(==13378== ) s
+25.8 502 M (14:) s
+52.2 502 M
+(==13378== For counts of detected and suppressed errors, rerun with: -v) s
+25.8 490 M (15:) s
+52.2 490 M
+(==13378== ERROR SUMMARY: 0 errors from 0 contexts \(suppressed: 0 from 0\)) s
+25.8 478 M (16:) s
+52.2 478 M
+(EXIT STATUS = 0) s
+_R
+S
+%%Trailer
+%%Pages: 25
+%%DocumentNeededResources: font Times-Roman Courier-Bold Times-Bold 
+%%EOF
